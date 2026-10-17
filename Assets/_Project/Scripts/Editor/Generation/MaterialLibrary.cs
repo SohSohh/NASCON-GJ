@@ -339,9 +339,9 @@ namespace NasconGJ.EditorTools.Generation
             tone.mode.Override(TonemappingMode.ACES);
 
             var bloom = Comp<Bloom>();
-            bloom.threshold.Override(0.85f);
-            bloom.intensity.Override(0.9f);
-            bloom.scatter.Override(0.72f);
+            bloom.threshold.Override(1.05f);
+            bloom.intensity.Override(0.45f);
+            bloom.scatter.Override(0.55f);
             bloom.tint.Override(new Color(1f, 0.78f, 0.6f));
 
             var vignette = Comp<Vignette>();
@@ -350,8 +350,8 @@ namespace NasconGJ.EditorTools.Generation
             vignette.color.Override(new Color(0.03f, 0.01f, 0.03f));
 
             var color = Comp<ColorAdjustments>();
-            color.postExposure.Override(0.35f);
-            color.contrast.Override(18f);
+            color.postExposure.Override(0.45f);
+            color.contrast.Override(10f);
             color.saturation.Override(-8f);
             color.colorFilter.Override(new Color(1f, 0.93f, 0.86f));
 

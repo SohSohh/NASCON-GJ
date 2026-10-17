@@ -32,6 +32,7 @@ Shader "NASCON/StylizedLit"
         _SpecSize("Spec Size", Range(0.001, 0.5)) = 0.08
 
         [Header(Rim)]
+        _InteractionHighlight("Interaction Highlight", Float) = 0
         _RimColor("Rim Color", Color) = (0.32, 0.18, 0.42, 1)
         _RimStrength("Rim Strength", Range(0, 1)) = 0.12
 
@@ -69,6 +70,7 @@ Shader "NASCON/StylizedLit"
             half _SpecSize;
             half4 _RimColor;
             half _RimStrength;
+            half _InteractionHighlight;
             half4 _EmissionColor;
             half _MaxLight;
             float4 _CamClip;
@@ -240,6 +242,9 @@ Shader "NASCON/StylizedLit"
                 half rim = pow(1.0h - saturate(dot(N, V)), 4.0h) * _RimStrength;
 
                 half3 color = ambient + lit + specular * _SpecStrength + _RimColor.rgb * rim + _EmissionColor.rgb;
+                // Broad, light-independent edge survives palette quantization, without lighting the room.
+                half edge = pow(1.0h - saturate(dot(N, V)), 2.0h);
+                color += half3(0.65h, 0.9h, 1.0h) * _InteractionHighlight * (0.22h + edge * 1.8h);
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1);
             }

@@ -11,6 +11,7 @@ Shader "NASCON/StylizedFlame"
         [HDR] _CoreColor("Core Color", Color) = (3.2, 2.7, 2.0, 1)
         [HDR] _EdgeColor("Rim Color", Color) = (0.9, 1.6, 1.5, 1)
         _Intensity("Body Intensity", Range(0, 8)) = 2.4
+        _InteractionHighlight("Interaction Highlight", Float) = 0
         _Cutoff("Shape Cutoff", Range(0, 1)) = 0.28
         _Softness("Edge Softness", Range(0.001, 0.2)) = 0.03
         _CoreThreshold("Core Threshold", Range(0, 1)) = 0.32
@@ -46,6 +47,7 @@ Shader "NASCON/StylizedFlame"
                 half4 _CoreColor;
                 half4 _EdgeColor;
                 half _Intensity;
+                half _InteractionHighlight;
                 half _Cutoff;
                 half _Softness;
                 half _CoreThreshold;
@@ -102,6 +104,7 @@ Shader "NASCON/StylizedFlame"
                 half3 col = input.color.rgb * _Intensity;
                 col = lerp(col, _EdgeColor.rgb * max(input.color.rgb, 0.4h), rim * _RimAmount);
                 col = lerp(col, _CoreColor.rgb, core);
+                col += half3(0.65h, 0.9h, 1.0h) * _InteractionHighlight * (0.25h + rim);
                 return half4(col * mask, mask);
             }
             ENDHLSL

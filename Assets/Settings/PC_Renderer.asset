@@ -27,7 +27,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
   - {fileID: 2871441581716548179}
-  m_RendererFeatureMap: ad6b866f10d7b46cl
+  - {fileID: 6157644693270399680}
+  m_RendererFeatureMap: ad6b866f10d7b46c532a80afe768d927c08a735339597455l
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 3
@@ -73,6 +74,26 @@ MonoBehaviour:
   fetchColorBuffer: 1
   requirements: 4
   passMaterial: {fileID: 2100000, guid: 4c795276b1898a545b5be627e9c5d040, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
+--- !u!114 &6157644693270399680
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: GBCamera
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 1
+  injectionPoint: 600
+  fetchColorBuffer: 1
+  requirements: 0
+  passMaterial: {fileID: 2100000, guid: 62e4ce0d0f1db464bb09fae1e04537ec, type: 2}
   passIndex: 0
   bindDepthStencilAttachment: 0
   m_Version: 1
