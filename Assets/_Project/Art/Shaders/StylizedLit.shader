@@ -49,6 +49,10 @@ Shader "NASCON/StylizedLit"
         _MaxLight("Max Light (first-person meshes)", Range(0.5, 64)) = 64
         [Header(First Person)]
         _CamClip("Camera Clip (x radius, y depth below eye; 0 = off)", Vector) = (0, 0, 0, 0)
+
+        [Header(GB Camera Bypass)]
+        [Toggle] _GBCameraBypass("Bypass GB Camera Palette", Float) = 0
+        [HideInInspector] _GBCameraStencilMask("GB Camera Stencil Mask", Float) = 0
     }
 
     SubShader
@@ -83,6 +87,8 @@ Shader "NASCON/StylizedLit"
             half4 _EmissionColor;
             half _MaxLight;
             float4 _CamClip;
+            half _GBCameraBypass;
+            float _GBCameraStencilMask;
         CBUFFER_END
 
         // First-person body: cut away everything in a column around the eye (head, neck, shoulders, hair)
@@ -169,6 +175,15 @@ Shader "NASCON/StylizedLit"
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
             Cull [_Cull]
+
+            // Bit 7 skips GBCamera; bit 6 preserves colour through painterly passes.
+            Stencil
+            {
+                Ref 192
+                WriteMask [_GBCameraStencilMask]
+                Comp Always
+                Pass Replace
+            }
 
             HLSLPROGRAM
             #pragma target 3.5

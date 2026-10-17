@@ -63,6 +63,7 @@ namespace NasconGJ.Fire
         public Vector3 Position => flameLight != null ? flameLight.transform.position : transform.position;
         public float Radius => flameLight != null ? (baseRange > 0.1f ? baseRange : flameLight.range) * currentRangeScale : 0f;
         public Transform Transform => transform;
+        public bool IsCarried => countsAsPlayerFire;
 
         private float baseIntensity;
         private float baseRange;

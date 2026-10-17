@@ -102,7 +102,17 @@ namespace NasconGJ.Death
 
         private IEnumerator ReloadAfterDelay()
         {
-            yield return new WaitForSeconds(reloadDelay);
+            var prefab = Resources.Load<DeathScare>("DeathScare");
+            if (prefab != null && prefab.IsConfigured)
+            {
+                var scare = Instantiate(prefab);
+                yield return scare.Play();
+            }
+            else
+            {
+                Debug.LogError("DeathScare prefab or its images/audio are missing.");
+                yield return new WaitForSecondsRealtime(reloadDelay);
+            }
             SceneLoader.ReloadCurrent();
         }
     }

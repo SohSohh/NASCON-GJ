@@ -10,8 +10,9 @@ namespace NasconGJ.Entities
     /// <summary>
     /// Coordinates all active shadow enemies in the scene.
     /// Manages aggregate fuel drain on the player's active carried flame (capped at +150%),
-    /// enforces single-herder arbitration, and distributes tactical POI targets.
+    /// while each shadow independently pursues the player.
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public class ShadowCoordinator : MonoBehaviour
     {
         private static ShadowCoordinator instance;
@@ -40,10 +41,12 @@ namespace NasconGJ.Entities
         [SerializeField] private float maxStackedDrain = 5f;
         private float drainLook;
 
+        // Change this value to tune how fast the held flame burns inside a Shadow's effect range.
+        public const float TorchBurnRateInShadowRange = 5f;
+
         private Transform player;
         private PlayerInventory inventory;
         private PlayerDeath death;
-        private ShadowEnemy currentHerder;
 
         public static void Register(ShadowEnemy enemy)
         {
@@ -54,8 +57,6 @@ namespace NasconGJ.Entities
         public static void Unregister(ShadowEnemy enemy)
         {
             enemies.Remove(enemy);
-            if (instance != null && instance.currentHerder == enemy)
-                instance.currentHerder = null;
         }
 
         private void Awake()
@@ -90,7 +91,6 @@ namespace NasconGJ.Entities
             bool playerDead = death != null && death.IsDead;
 
             UpdateDrain(chest, playerDead);
-            UpdateHerder(chest, playerDead);
         }
 
         private void UpdateDrain(Vector3 chest, bool playerDead)
@@ -111,14 +111,17 @@ namespace NasconGJ.Entities
 
             float totalDrainMultiplier = 0f;
             float maxThreat = 0f;
+            bool shadowInTorchRange = false;
 
             for (int i = 0; i < enemies.Count; i++)
             {
                 var enemy = enemies[i];
                 if (enemy == null || !enemy.isActiveAndEnabled) continue;
 
-                float drain = enemy.CalculateDrainMultiplier(chest);
-                totalDrainMultiplier += drain;
+                bool shadowAudible = enemy.IsWhisperAudible;
+                shadowInTorchRange |= shadowAudible;
+                if (shadowAudible)
+                    totalDrainMultiplier += enemy.CalculateDrainMultiplier(chest);
 
                 float threat = enemy.CalculateThreatLevel(chest);
                 if (threat > maxThreat) maxThreat = threat;
@@ -126,7 +129,9 @@ namespace NasconGJ.Entities
 
             // Cap stacked drain (e.g. +150% max burn rate)
             float clampedDrain = Mathf.Min(totalDrainMultiplier, maxStackedDrain);
-            activeFlame.BurnRateMultiplier = 1f + clampedDrain;
+            float burnRate = 1f + clampedDrain;
+            if (shadowInTorchRange) burnRate = Mathf.Max(burnRate, TorchBurnRateInShadowRange);
+            activeFlame.BurnRateMultiplier = burnRate;
             activeFlame.ShadowThreatLevel = maxThreat;
             // you can see it feeding: the frame darkens and pulls in while the flame is being drunk
             drainLook = Mathf.MoveTowards(drainLook, Mathf.Clamp01(clampedDrain / 3f) * 0.6f, Time.deltaTime * 1.5f);
@@ -138,72 +143,6 @@ namespace NasconGJ.Entities
             {
                 otherFlame.BurnRateMultiplier = 1f;
                 otherFlame.ShadowThreatLevel = 0f;
-            }
-        }
-
-        private void UpdateHerder(Vector3 chest, bool playerDead)
-        {
-            if (playerDead)
-            {
-                currentHerder = null;
-                for (int i = 0; i < enemies.Count; i++)
-                {
-                    if (enemies[i] != null) enemies[i].SetHerderRole(false, null);
-                }
-                return;
-            }
-
-            HerdTarget primaryTarget = HerdTarget.FindPrimaryTarget(player.position);
-
-            // Check if current herder is still eligible
-            if (currentHerder != null)
-            {
-                if (!currentHerder.isActiveAndEnabled ||
-                    currentHerder.IsFrozen ||
-                    currentHerder.Current == ShadowEnemy.State.Dormant ||
-                    Vector3.Distance(currentHerder.SurfacePoint, chest) > 20f ||
-                    primaryTarget == null)
-                {
-                    currentHerder = null;
-                }
-            }
-
-            // If no herder, arbitrate among eligible candidates
-            if (currentHerder == null && primaryTarget != null)
-            {
-                float bestScore = float.NegativeInfinity;
-                Vector3 toPoi = Vector3.ProjectOnPlane(primaryTarget.Position - player.position, Vector3.up).normalized;
-
-                for (int i = 0; i < enemies.Count; i++)
-                {
-                    var enemy = enemies[i];
-                    if (enemy == null || !enemy.isActiveAndEnabled || enemy.IsFrozen) continue;
-                    if (enemy.Current == ShadowEnemy.State.Dormant) continue;
-
-                    Vector3 toEnemy = Vector3.ProjectOnPlane(enemy.SurfacePoint - player.position, Vector3.up);
-                    float dist = toEnemy.magnitude;
-                    if (dist > 14f || dist < 1e-3f) continue;
-
-                    toEnemy.Normalize();
-                    // Prefer enemies already somewhat positioned toward the POI
-                    float alignment = Vector3.Dot(toEnemy, toPoi);
-                    float score = alignment * 10f - dist;
-
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        currentHerder = enemy;
-                    }
-                }
-            }
-
-            // Assign role to all enemies
-            for (int i = 0; i < enemies.Count; i++)
-            {
-                var enemy = enemies[i];
-                if (enemy == null) continue;
-                bool isHerder = (enemy == currentHerder);
-                enemy.SetHerderRole(isHerder, isHerder ? primaryTarget : null);
             }
         }
 

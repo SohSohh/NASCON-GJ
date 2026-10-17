@@ -1,62 +1,75 @@
-using NasconGJ.Death;
 using NasconGJ.Entities;
 using UnityEngine;
 
 namespace NasconGJ.Audio
 {
-    /// <summary>
-    /// Two-layer adaptive music from DOCUMENTATION/Music And Audio:
-    ///   ambience (main_ambience) always under the level,
-    ///   presence (presence) swells when a shadow is hunting nearby or your flame is gone, and the ambience ducks under it.
-    /// </summary>
+    /// <summary>Both music layers follow the same proximity trigger as shadow whisper and fuel drain.</summary>
     public class MusicDirector : MonoBehaviour
     {
         [SerializeField] private AudioSource ambience;
         [SerializeField] private AudioSource presence;
         [SerializeField] private float ambienceVolume = 0.55f;
         [SerializeField] private float presenceVolume = 0.8f;
-        [SerializeField] private float threatRange = 12f;
-        [SerializeField] private float riseSpeed = 0.6f;
-        [SerializeField] private float fallSpeed = 0.25f;
+        [SerializeField, Min(0f)] private float fadeDuration = 0.5f;
 
-        private ShadowEnemy[] shadows;
-        private PlayerDeath death;
-        private Transform listener;
-        private float threat, scanTimer;
-
-        private void Start()
+        private void OnEnable()
         {
-            if (ambience != null) { ambience.loop = true; ambience.volume = ambienceVolume; if (!ambience.isPlaying) ambience.Play(); }
-            if (presence != null) { presence.loop = true; presence.volume = 0f; if (!presence.isPlaying) presence.Play(); }
+            Prepare(ambience);
+            Prepare(presence);
+        }
+
+        private static void Prepare(AudioSource source)
+        {
+            if (source == null) return;
+            source.playOnAwake = false;
+            source.loop = true;
+            source.spatialBlend = 0f;
+            source.volume = 0f;
+            source.Stop();
+            source.clip?.LoadAudioData();
         }
 
         private void Update()
         {
-            scanTimer -= Time.deltaTime;
-            if (scanTimer <= 0f)
+            bool inRange = false;
+            foreach (var shadow in ShadowCoordinator.Enemies)
             {
-                scanTimer = 1f;
-                shadows = FindObjectsByType<ShadowEnemy>();
-                if (death == null) death = FindAnyObjectByType<PlayerDeath>();
-                if (listener == null && Camera.main != null) listener = Camera.main.transform;
-            }
-
-            float target = 0f;
-            if (death != null && death.InDarkness) target = 1f;
-            if (listener != null && shadows != null)
-            {
-                foreach (var s in shadows)
+                if (shadow != null && shadow.IsWhisperAudible)
                 {
-                    if (s == null) continue;
-                    bool hunting = s.Current == ShadowEnemy.State.Approach || s.Current == ShadowEnemy.State.Drain || s.Current == ShadowEnemy.State.Herd || s.Current == ShadowEnemy.State.Windup || s.Current == ShadowEnemy.State.Lunge;
-                    float closeness = 1f - Mathf.Clamp01(Vector3.Distance(s.SurfacePoint, listener.position) / threatRange);
-                    target = Mathf.Max(target, closeness * (hunting ? 1f : 0.35f));
+                    inRange = true;
+                    break;
                 }
             }
 
-            threat = Mathf.MoveTowards(threat, target, Time.deltaTime * (target > threat ? riseSpeed : fallSpeed));
-            if (presence != null) presence.volume = threat * presenceVolume;
-            if (ambience != null) ambience.volume = ambienceVolume * (1f - threat * 0.6f);
+            SetPlayback(ambience, inRange, ambienceVolume, Time.deltaTime);
+            SetPlayback(presence, inRange, presenceVolume, Time.deltaTime);
+        }
+
+        private void SetPlayback(AudioSource source, bool active, float volume, float deltaTime, bool immediate = false)
+        {
+            if (source == null) return;
+
+            float targetVolume = active ? volume : 0f;
+            if (immediate || fadeDuration <= 0f)
+                source.volume = targetVolume;
+            else
+                source.volume = Mathf.MoveTowards(source.volume, targetVolume,
+                    Mathf.Max(volume, 0.01f) / fadeDuration * deltaTime);
+
+            if (active && source.isActiveAndEnabled && source.clip != null)
+            {
+                if (!source.isPlaying) source.Play();
+            }
+            else if (!active && source.volume <= 0.001f && source.isPlaying)
+            {
+                source.Stop();
+            }
+        }
+
+        private void OnDisable()
+        {
+            SetPlayback(ambience, false, ambienceVolume, 0f, true);
+            SetPlayback(presence, false, presenceVolume, 0f, true);
         }
     }
 }

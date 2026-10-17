@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using NasconGJ.Core;
 using NasconGJ.Fire;
 using NasconGJ.Interaction;
@@ -36,12 +37,14 @@ namespace NasconGJ.Guiding
         public bool IsTalking { get; private set; }
         /// <summary>While true the light stays at its stop after speaking (tutorial scripts hold it until a lesson is done).</summary>
         public bool Hold { get; set; }
+        public bool TutorialControlsSpeech { get; set; }
 
         // ILightSource
         public bool IsLit => glow != null && glow.enabled;
         public Vector3 Position => transform.position;
         public float Radius => glow != null ? glow.range : 0f;
         public Transform Transform => transform;
+        public bool IsCarried => false;
 
         private int stopIndex;
         private bool moving;
@@ -59,7 +62,7 @@ namespace NasconGJ.Guiding
             if (stops.Length > 0 && stops[0].point != null) transform.position = stops[0].point.position;
         }
 
-        public bool CanInteract(GameObject interactor) => !IsTalking && !moving && CurrentDialogue != null && !currentPlayed;
+        public bool CanInteract(GameObject interactor) => !TutorialControlsSpeech && !DialogueUI.IsOpen && !IsTalking && !moving && CurrentDialogue != null && !currentPlayed;
 
         public void Interact(GameObject interactor) => Talk();
 
@@ -93,16 +96,27 @@ namespace NasconGJ.Guiding
                 return;
             }
 
-            if (autoTriggerOnApproach && !IsTalking && !currentPlayed && CurrentDialogue != null && player != null &&
+            if (!TutorialControlsSpeech && autoTriggerOnApproach && !IsTalking && !currentPlayed && CurrentDialogue != null && player != null &&
                 (player.position - transform.position).sqrMagnitude < triggerRadius * triggerRadius)
                 Talk();
         }
 
         private void Talk()
         {
-            if (DialogueUI.Instance == null || CurrentDialogue == null) return;
+            if (DialogueUI.Instance == null || DialogueUI.IsOpen || CurrentDialogue == null || IsTalking) return;
             IsTalking = true;
             DialogueUI.Instance.Show(CurrentDialogue, OnDialogueFinished);
+        }
+
+        public IEnumerator SpeakTutorialStop(int index)
+        {
+            if (index < 0 || index >= stops.Length) yield break;
+            Hold = false;
+            while (stopIndex < index || moving) yield return null;
+            Hold = true;
+            while (DialogueUI.IsOpen) yield return null;
+            if (stopIndex == index && !currentPlayed) Talk();
+            while (IsTalking || DialogueUI.IsOpen) yield return null;
         }
 
         private void OnDialogueFinished()

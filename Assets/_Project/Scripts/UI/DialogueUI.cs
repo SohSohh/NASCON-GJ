@@ -91,13 +91,13 @@ namespace NasconGJ.UI
                 }
             }
 
-            open = false;
             while (group.alpha > 0f)
             {
                 group.alpha = Mathf.MoveTowards(group.alpha, 0f, Time.deltaTime * fadeSpeed);
                 yield return null;
             }
 
+            open = false;
             GameEvents.RaiseDialogueFinished();
             onFinished?.Invoke();
         }
