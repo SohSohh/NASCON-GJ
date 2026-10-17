@@ -1,6 +1,7 @@
 using System.Collections;
 using NasconGJ.Core;
 using NasconGJ.Death;
+using NasconGJ.Entities;
 using NasconGJ.Fire;
 using NasconGJ.Interaction;
 using NasconGJ.Items;
@@ -15,11 +16,13 @@ namespace NasconGJ.UI
     {
         [SerializeField] private TMP_Text promptText;
         [SerializeField] private Image transferRing;
+        [SerializeField] private Image transferRingOutline;
 
         [Header("Fuel")]
         [SerializeField] private CanvasGroup fuelGroup;
         [SerializeField] private RectTransform fuelFill;
         [SerializeField] private Image fuelFillImage;
+        [SerializeField] private CanvasGroup fuelBarFlashGroup;
         [SerializeField] private Gradient fuelColor;
         [SerializeField] private TMP_Text slotText;
 
@@ -36,6 +39,8 @@ namespace NasconGJ.UI
         private PlayerDeath death;
         private Coroutine messageRoutine;
         private FlammableItem lowFuelWarned;
+        private float shadowFlashTime;
+        private bool wasShadowAccelerated;
 
         /// <summary>Tutorials that script their own "your flame is dying" beat turn the generic warning off.</summary>
         public static bool SuppressLowFuelWarning;
@@ -56,10 +61,10 @@ namespace NasconGJ.UI
         {
             if (promptText != null)
             {
-                promptText.outlineWidth = 0.35f;
                 var promptMaterial = promptText.fontMaterial;
                 promptMaterial.SetColor("_OutlineColor", Color.black);
-                promptMaterial.SetFloat("_OutlineWidth", 0.35f);
+                promptMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
+                promptMaterial.SetFloat("_OutlineWidth", 0.4f);
             }
 
             inventory = FindAnyObjectByType<PlayerInventory>();
@@ -79,6 +84,8 @@ namespace NasconGJ.UI
             UpdateFuel();
 
             transferRing.fillAmount = carrier.TransferProgress;
+            if (transferRingOutline != null)
+                transferRingOutline.fillAmount = carrier.TransferProgress;
 
             bool showCover = carrier.IsCovering || carrier.CoverMeter < 0.999f;
             coverGroup.alpha = Mathf.MoveTowards(coverGroup.alpha, showCover ? 1f : 0f, Time.deltaTime * 4f);
@@ -91,9 +98,9 @@ namespace NasconGJ.UI
             if (!DialogueUI.IsOpen && (death == null || !death.IsDead))
             {
                 if (carrier.TransferTarget != null)
-                    prompt = $"<mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark>  <color=#FFF4E8><b>Hold</b></color>  pass the flame to the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}";
+                    prompt = $"<color=#FFF4E8><b>Hold</b></color> <mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark> <color=#FFF4E8>to pass the flame to the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}</color>";
                 if (interactor.Current != null)
-                    prompt = (prompt.Length > 0 ? prompt + "\n" : "") + $"<mark=#130A06E8><color=#FFD084><b>[E]</b></color></mark>  <color=#FFF4E8>{interactor.Current.Prompt.ToLowerInvariant()}</color>";
+                    prompt = (prompt.Length > 0 ? prompt + "\n" : "") + $"<color=#FFF4E8><b>Hold</b></color> <mark=#130A06E8><color=#FFD084><b>[E]</b></color></mark> <color=#FFF4E8>to {interactor.Current.Prompt.ToLowerInvariant()}</color>";
             }
             promptText.text = prompt;
         }
@@ -106,8 +113,19 @@ namespace NasconGJ.UI
 
             float fuel = flame != null && flame.IsBurning ? flame.NormalizedFuel : 0f;
             fuelFill.anchorMax = new Vector2(fuel, 1f);
-            fuelFillImage.color = fuelColor.Evaluate(fuel);
+            bool shadowAccelerated = show && flame.BurnRateMultiplier >= ShadowCoordinator.TorchBurnRateInShadowRange;
+            if (!shadowAccelerated || !wasShadowAccelerated) shadowFlashTime = 0f;
+            else shadowFlashTime += Time.unscaledDeltaTime;
+            wasShadowAccelerated = shadowAccelerated;
 
+            // Hard transitions at five flashes per second, starting bright on entry.
+            bool flashOn = Mathf.Repeat(shadowFlashTime, 0.2f) < 0.1f;
+            fuelFillImage.color = shadowAccelerated
+                ? (flashOn ? new Color(1f, 0.05f, 0.02f, 1f) : new Color(0.2f, 0.01f, 0.01f, 1f))
+                : fuelColor.Evaluate(fuel);
+            // Older scene instances may not have the optional bar group assigned.
+            if (fuelBarFlashGroup != null)
+                fuelBarFlashGroup.alpha = shadowAccelerated && !flashOn ? 0.15f : 1f;
             if (show && fuel < 0.3f && lowFuelWarned != flame && !SuppressLowFuelWarning && HintUI.Instance != null)
             {
                 lowFuelWarned = flame;

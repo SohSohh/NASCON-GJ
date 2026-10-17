@@ -12,6 +12,7 @@ namespace NasconGJ.Entities
     /// Manages aggregate fuel drain on the player's active carried flame (capped at +150%),
     /// enforces single-herder arbitration, and distributes tactical POI targets.
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public class ShadowCoordinator : MonoBehaviour
     {
         private static ShadowCoordinator instance;
@@ -38,6 +39,9 @@ namespace NasconGJ.Entities
         [Header("Drain Limits")]
         [Tooltip("Max stacked carried-flame burn rate multiplier from all enemies combined (+150% = 1.5).")]
         [SerializeField] private float maxStackedDrain = 1.5f;
+
+        // Change this value to tune how fast the held flame burns inside a Shadow's effect range.
+        public const float TorchBurnRateInShadowRange = 4f;
 
         private Transform player;
         private PlayerInventory inventory;
@@ -109,14 +113,17 @@ namespace NasconGJ.Entities
 
             float totalDrainMultiplier = 0f;
             float maxThreat = 0f;
+            bool shadowInTorchRange = false;
 
             for (int i = 0; i < enemies.Count; i++)
             {
                 var enemy = enemies[i];
                 if (enemy == null || !enemy.isActiveAndEnabled) continue;
 
-                float drain = enemy.CalculateDrainMultiplier(chest);
-                totalDrainMultiplier += drain;
+                bool shadowAudible = enemy.IsWhisperAudible;
+                shadowInTorchRange |= shadowAudible;
+                if (shadowAudible)
+                    totalDrainMultiplier += enemy.CalculateDrainMultiplier(chest);
 
                 float threat = enemy.CalculateThreatLevel(chest);
                 if (threat > maxThreat) maxThreat = threat;
@@ -124,7 +131,9 @@ namespace NasconGJ.Entities
 
             // Cap stacked drain (e.g. +150% max burn rate)
             float clampedDrain = Mathf.Min(totalDrainMultiplier, maxStackedDrain);
-            activeFlame.BurnRateMultiplier = 1f + clampedDrain;
+            float burnRate = 1f + clampedDrain;
+            if (shadowInTorchRange) burnRate = Mathf.Max(burnRate, TorchBurnRateInShadowRange);
+            activeFlame.BurnRateMultiplier = burnRate;
             activeFlame.ShadowThreatLevel = maxThreat;
 
             // Ensure other/holstered items in inventory are unaffected

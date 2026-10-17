@@ -23,7 +23,7 @@ namespace NasconGJ.EditorTools.Generation
         private static readonly Color GuideLine = new(0.7f, 0.92f, 1f, 0.45f);
 
         private static TMP_FontAsset title, body, italic;
-        private static Sprite rounded, shade, diamond, line, ring;
+        private static Sprite rounded, shade, diamond, line, ring, ringOutlineSprite;
 
         public static void GenerateAll()
         {
@@ -36,6 +36,7 @@ namespace NasconGJ.EditorTools.Generation
             diamond = TextureGenerator.GetSprite(TextureGenerator.DiamondPath);
             line = TextureGenerator.GetSprite(TextureGenerator.LinePath);
             ring = TextureGenerator.GetSprite(TextureGenerator.RingPath);
+            ringOutlineSprite = TextureGenerator.GetSprite(TextureGenerator.RingOutlinePath);
             BuildHUD();
             BuildMainMenu();
             BuildCutsceneCanvas();
@@ -59,11 +60,12 @@ namespace NasconGJ.EditorTools.Generation
             MakeImage(crosshairHalo, new Color(0.01f, 0.008f, 0.006f, 0.9f), diamond);
             var cross = MakeRect("Crosshair", root, Center, Center, Vector2.zero, new Vector2(14, 14));
             MakeImage(cross, new Color(1f, 0.78f, 0.42f, 1f), diamond);
-            var ringImg = MakeImage(MakeRect("TransferRing", root, Center, Center, Vector2.zero, new Vector2(48, 48)), Ember, ring);
-            ringImg.type = Image.Type.Filled;
-            ringImg.fillMethod = Image.FillMethod.Radial360;
-            ringImg.fillOrigin = (int)Image.Origin360.Top;
-            ringImg.fillAmount = 0f;
+            var ringOutline = MakeImage(MakeRect("TransferRingOutline", root, Center, Center, Vector2.zero, new Vector2(72, 72)),
+                Color.black, ringOutlineSprite);
+            SetupTransferRing(ringOutline);
+            var ringImg = MakeImage(MakeRect("TransferRing", root, Center, Center, Vector2.zero, new Vector2(72, 72)),
+                Color.white, ring);
+            SetupTransferRing(ringImg);
 
             var prompt = MakeText(MakeRect("Prompt", root, Center, Center, new Vector2(0, -90), new Vector2(1250, 120)), "", body, 36, Warm, TextAlignmentOptions.Top);
             prompt.fontStyle = FontStyles.Bold;
@@ -77,12 +79,13 @@ namespace NasconGJ.EditorTools.Generation
             slot.characterSpacing = 6f;
             slot.rectTransform.pivot = new Vector2(0, 0);
             slot.rectTransform.anchoredPosition = new Vector2(0, -22);
-            var fuelBg = MakeRect("Bar", fuelRoot, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(0, 4));
+            var fuelBg = MakeRect("Bar", fuelRoot, Vector2.zero, new Vector2(1, 0), Vector2.zero, new Vector2(0, 10));
+            var fuelBarFlashGroup = fuelBg.gameObject.AddComponent<CanvasGroup>();
             fuelBg.pivot = new Vector2(0.5f, 0);
             MakeImage(fuelBg, new Color(0.1f, 0.05f, 0.04f, 0.7f));
             var fuelFill = MakeRect("Fill", fuelBg, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var fuelFillImg = MakeImage(fuelFill, Ember);
-            var coverRoot = MakeRect("CoverMeter", fuelRoot, Vector2.zero, new Vector2(1, 0), new Vector2(0, 10), new Vector2(0, 2));
+            var coverRoot = MakeRect("CoverMeter", fuelRoot, Vector2.zero, new Vector2(1, 0), new Vector2(0, 16), new Vector2(0, 4));
             coverRoot.pivot = new Vector2(0.5f, 0);
             var coverGroup = coverRoot.gameObject.AddComponent<CanvasGroup>();
             coverGroup.alpha = 0f;
@@ -152,9 +155,11 @@ namespace NasconGJ.EditorTools.Generation
             var hud = root.gameObject.AddComponent<HUDController>();
             GenUtil.Set(hud, "promptText", prompt);
             GenUtil.Set(hud, "transferRing", ringImg);
+            GenUtil.Set(hud, "transferRingOutline", ringOutline);
             GenUtil.Set(hud, "fuelGroup", fuelGroup);
             GenUtil.Set(hud, "fuelFill", fuelFill);
             GenUtil.Set(hud, "fuelFillImage", fuelFillImg);
+            GenUtil.Set(hud, "fuelBarFlashGroup", fuelBarFlashGroup);
             GenUtil.Set(hud, "fuelColor", GameplayPrefabGenerator.Grad(
                 new[] { new Color(0.8f, 0.12f, 0.05f), new Color(1f, 0.45f, 0.1f), new Color(1f, 0.72f, 0.35f) },
                 new[] { 0f, 0.3f, 1f }, new[] { 1f, 1f }, new[] { 0f, 1f }));
@@ -572,6 +577,14 @@ namespace NasconGJ.EditorTools.Generation
             rt.anchoredPosition = pos;
             rt.sizeDelta = size;
             return rt;
+        }
+
+        private static void SetupTransferRing(Image image)
+        {
+            image.type = Image.Type.Filled;
+            image.fillMethod = Image.FillMethod.Radial360;
+            image.fillOrigin = (int)Image.Origin360.Top;
+            image.fillAmount = 0f;
         }
 
         private static Image MakeImage(RectTransform rt, Color color, Sprite sprite = null)

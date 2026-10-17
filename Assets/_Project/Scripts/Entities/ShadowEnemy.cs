@@ -1,6 +1,7 @@
 using NasconGJ.Core;
 using NasconGJ.Death;
 using NasconGJ.Fire;
+using NasconGJ.Items;
 using UnityEngine;
 
 namespace NasconGJ.Entities
@@ -10,6 +11,7 @@ namespace NasconGJ.Entities
     /// It can traverse dim spill light, but freezes immediately under direct strong light.
     /// Resumes after a short darkness grace period with telegraphed visual/audio cues.
     /// </summary>
+    [DefaultExecutionOrder(-200)]
     public class ShadowEnemy : MonoBehaviour
     {
         public enum State
@@ -45,7 +47,9 @@ namespace NasconGJ.Entities
         [SerializeField] private float detectRange = 13f;
         [SerializeField] private float preferredApproachMin = 4f;
         [SerializeField] private float preferredApproachMax = 6f;
-        [SerializeField] private float drainRadius = 7f;
+        [Tooltip("Distance in world units from the shadow center to the player. Controls ambience, presence, whisper, and accelerated fuel drain together.")]
+        [InspectorName("Shadow Effect Range")]
+        [SerializeField, Min(0f)] private float drainRadius = 7f;
         [SerializeField] private float fullDrainDistance = 1.75f;
         [SerializeField] private float killRange = 1.6f;
         [SerializeField] private float windupTime = 0.55f;
@@ -66,6 +70,7 @@ namespace NasconGJ.Entities
         [Header("FX & Audio")]
         [SerializeField] private ParticleSystem smoke;
         [SerializeField] private AudioSource whisper;
+        [SerializeField, Min(0f)] private float whisperFadeDuration = 0.35f;
         [SerializeField] private AudioClip lungeClip;
 
         public State Current { get; private set; } = State.Dormant;
@@ -74,6 +79,14 @@ namespace NasconGJ.Entities
         public Vector3 SurfacePoint => pos;
         public float CurrentLightExposure { get; private set; }
 
+        public bool IsWithinShadowEffectRange => player != null && drainRadius > 0f &&
+            (Center - player.position).sqrMagnitude <= drainRadius * drainRadius;
+        // The proximity warning stays audible even when torchlight freezes movement.
+        private float WhisperTargetVolume => Current == State.Windup ? 1f : 0.9f;
+        public bool IsWhisperAudible => isActiveAndEnabled &&
+            (death == null || !death.IsDead) && IsWithinShadowEffectRange &&
+            whisper != null && whisper.isActiveAndEnabled && !whisper.mute &&
+            whisper.clip != null && Current != State.Lunge;
         private Vector3 pos, normal, home, homeNormal, moveDir;
         private Vector3 visualNormal, visualUp;
         private Vector3 lightPos;
@@ -96,6 +109,7 @@ namespace NasconGJ.Entities
         private void OnDisable()
         {
             ShadowCoordinator.Unregister(this);
+            if (whisper != null) whisper.Stop();
         }
 
         private void Start()
@@ -120,6 +134,11 @@ namespace NasconGJ.Entities
             if (whisper != null)
             {
                 whisper.volume = 0f;
+                // Player warning: distance attenuation must not hide active drain.
+                whisper.spatialBlend = 0f;
+                whisper.loop = true;
+                whisper.playOnAwake = false;
+                whisper.clip?.LoadAudioData();
                 whisper.Stop();
             }
             FindPlayer();
@@ -669,7 +688,7 @@ namespace NasconGJ.Entities
             var cam = Camera.main;
             if (skin != null) skin.Renderer.enabled = false;
             if (body != null) body.SetHidden(true);
-            if (lungeClip != null && cam != null && LightSourceRegistry.IsPointLit(Center))
+            if (lungeClip != null && cam != null && IsWithinShadowEffectRange)
                 AudioSource.PlayClipAtPoint(lungeClip, cam.transform.position, 1f);
             if (cam != null && skin != null)
                 ShadowLunge.Play(skin.Renderer.sharedMaterial, ShadowSheet.CreatureFrame(ShadowSheet.Attack + 1), cam.transform,
@@ -760,33 +779,21 @@ namespace NasconGJ.Entities
 
             if (whisper != null)
             {
-                // A shadow's whisper is audible only while its body is inside a lit source's radius.
-                if (!LightSourceRegistry.IsPointLit(Center))
-                {
-                    whisperVolume = 0f;
-                    whisper.volume = 0f;
-                    if (whisper.isPlaying) whisper.Stop();
-                    whisper.transform.position = Center;
-                    return;
-                }
+                bool whisperAudible = IsWhisperAudible;
+                float targetVolume = whisperAudible ? WhisperTargetVolume : 0f;
+                if (whisperFadeDuration <= 0f)
+                    whisperVolume = targetVolume;
+                else
+                    whisperVolume = Mathf.MoveTowards(whisperVolume, targetVolume,
+                        Mathf.Max(WhisperTargetVolume, 0.01f) / whisperFadeDuration * dt);
 
-                float target = Current switch
-                {
-                    State.Dormant => 0.05f,
-                    State.Observe => 0.2f,
-                    State.Approach => 0.45f,
-                    State.Drain => 0.9f,
-                    State.Herd => 0.65f,
-                    State.Frozen => IsResumeWarning ? 0.25f : 0.05f,
-                    State.Windup => 1f,
-                    State.Lunge => 0f,
-                    _ => 0f
-                };
-                whisperVolume = Mathf.MoveTowards(whisperVolume, target, dt * 1.5f);
                 whisper.volume = whisperVolume;
                 whisper.pitch = Current == State.Frozen ? 0.75f : 1f;
                 whisper.transform.position = Center;
-                if (whisperVolume > 0.001f && !whisper.isPlaying) whisper.Play();
+                if (whisperAudible && whisperVolume > 0.001f && !whisper.isPlaying)
+                {
+                    whisper.Play();
+                }
                 else if (whisperVolume <= 0.001f && whisper.isPlaying) whisper.Stop();
             }
         }

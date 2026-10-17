@@ -10,6 +10,7 @@ namespace NasconGJ.EditorTools.Generation
         public static string StoneGritPath => GenUtil.TextureDir + "/T_StoneGrit.png";
         public static string SoftParticlePath => GenUtil.TextureDir + "/T_SoftParticle.png";
         public static string RingPath => GenUtil.TextureDir + "/T_Ring.png";
+        public static string RingOutlinePath => GenUtil.TextureDir + "/T_RingOutline.png";
         public static string ShadowPath => GenUtil.TextureDir + "/T_ShadowSilhouette.png";
 
         public static void GenerateAll()
@@ -17,7 +18,8 @@ namespace NasconGJ.EditorTools.Generation
             GenUtil.EnsureFolder(GenUtil.TextureDir);
             Save(StoneGrit(256), StoneGritPath, true, false, TextureWrapMode.Repeat);
             Save(SoftParticle(64), SoftParticlePath, true, false, TextureWrapMode.Clamp);
-            Save(Ring(128), RingPath, true, true, TextureWrapMode.Clamp);
+            Save(Ring(128, 0.09f), RingPath, true, true, TextureWrapMode.Clamp);
+            Save(Ring(128, 0.2f), RingOutlinePath, true, true, TextureWrapMode.Clamp);
             Save(ShadowSilhouette(256, 512), ShadowPath, true, false, TextureWrapMode.Clamp);
             Save(RoundedRect(64, 16), RoundedPath, true, true, TextureWrapMode.Clamp, new Vector4(20, 20, 20, 20));
             Save(HorizontalShade(512), ShadePath, true, true, TextureWrapMode.Clamp);
@@ -127,7 +129,7 @@ namespace NasconGJ.EditorTools.Generation
             return tex;
         }
 
-        private static Texture2D Ring(int size)
+        private static Texture2D Ring(int size, float halfThickness)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             for (int y = 0; y < size; y++)
@@ -135,7 +137,7 @@ namespace NasconGJ.EditorTools.Generation
             {
                 float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f;
                 float r = Mathf.Sqrt(dx * dx + dy * dy);
-                float a = Mathf.Clamp01(1f - Mathf.Abs(r - 0.82f) / 0.09f);
+                float a = Mathf.Clamp01(1f - Mathf.Abs(r - 0.78f) / halfThickness);
                 tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.SmoothStep(0f, 1f, a)));
             }
             tex.Apply();

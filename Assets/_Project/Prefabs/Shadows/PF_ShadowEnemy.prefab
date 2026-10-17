@@ -313,18 +313,25 @@ MonoBehaviour:
     m_Bits: 3329
   leashRadius: 9
   lurkSpeed: 0.35
-  stalkSpeed: 1.5
-  recoilSpeed: 3.4
+  crawlSpeed: 1.5
+  weakLightSpeedMultiplier: 0.6
   detectRange: 13
+  preferredApproachMin: 4
+  preferredApproachMax: 6
+  drainRadius: 7.5
+  fullDrainDistance: 1.75
   killRange: 1.6
   windupTime: 0.55
-  blockedByCastShadows: 0
+  freezeThreshold: 0.7
+  resumeDelay: 0.75
   occluderMask:
     serializedVersion: 2
     m_Bits: 3379
-  recoilHold: 0.7
+  blockedByCastShadows: 0
+  maxDrainMultiplier: 0.5
   smoke: {fileID: 5128039585897415033}
   whisper: {fileID: 7170470632708229283}
+  whisperFadeDuration: 0.35
   lungeClip: {fileID: 8300000, guid: db89c40e80c07bb48b59f3c3c8ea9512, type: 3}
 --- !u!1 &5774470778916828800
 GameObject:
