@@ -2353,8 +2353,8 @@ Light:
   serializedVersion: 13
   m_Type: 2
   m_Color: {r: 1, g: 0.7, b: 0.42, a: 1}
-  m_Intensity: 8
-  m_Range: 8
+  m_Intensity: 12
+  m_Range: 12
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -5065,7 +5065,6 @@ MonoBehaviour:
   flickerAmount: 0.18
   flickerSpeed: 8
   lowFuelThreshold: 0.25
-  gameplayRadiusFactor: 0.6
   coveredIntensity: 0.12
 --- !u!114 &8023113718821864869
 MonoBehaviour:
