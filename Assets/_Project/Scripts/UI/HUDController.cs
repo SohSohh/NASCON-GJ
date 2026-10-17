@@ -102,7 +102,7 @@ namespace NasconGJ.UI
         {
             FlammableItem flame = inventory.ActiveFlame;
             bool show = flame != null && flame.IsBurning && !flame.InfiniteBurn;
-            fuelGroup.alpha = Mathf.MoveTowards(fuelGroup.alpha, show ? 1f : 0.25f, Time.deltaTime * 3f);
+            fuelGroup.alpha = Mathf.MoveTowards(fuelGroup.alpha, show ? 1f : 0.7f, Time.deltaTime * 3f);
 
             float fuel = flame != null && flame.IsBurning ? flame.NormalizedFuel : 0f;
             fuelFill.anchorMax = new Vector2(fuel, 1f);

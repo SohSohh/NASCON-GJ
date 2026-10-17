@@ -36,7 +36,7 @@ namespace NasconGJ.EditorTools.Generation
         public static string PlayerPath => $"{GenUtil.PlayerPrefabDir}/{Player}.prefab";
 
         public static readonly Color FireColor = new(1f, 0.7f, 0.42f);
-        public static readonly Color GuideColor = new(0.72f, 0.9f, 1f);
+        public static readonly Color GuideColor = new(0.15f, 0.45f, 1f);
 
         public static void GenerateAll()
         {

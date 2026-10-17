@@ -49,6 +49,7 @@ namespace NasconGJ.EditorTools.Generation
         private static void BuildHUD()
         {
             var root = MakeCanvas("PF_HUD", 10);
+            root.GetComponent<UnityEngine.UI.CanvasScaler>().referenceResolution = new Vector2(1600, 900);
             var uiAudio = root.gameObject.AddComponent<AudioSource>();
             uiAudio.playOnAwake = false;
             uiAudio.spatialBlend = 0f;
@@ -72,7 +73,7 @@ namespace NasconGJ.EditorTools.Generation
             fuelRoot.pivot = Vector2.zero;
             var fuelGroup = fuelRoot.gameObject.AddComponent<CanvasGroup>();
             var slot = MakeText(MakeRect("SlotText", fuelRoot, new Vector2(0, 1), new Vector2(1, 1), Vector2.zero, new Vector2(0, 26)),
-                "[1] Torch", title, 15, Muted, TextAlignmentOptions.BottomLeft);
+                "[1] Torch", title, 20, Warm, TextAlignmentOptions.BottomLeft);
             slot.characterSpacing = 6f;
             slot.rectTransform.pivot = new Vector2(0, 0);
             slot.rectTransform.anchoredPosition = new Vector2(0, -22);
@@ -113,7 +114,7 @@ namespace NasconGJ.EditorTools.Generation
             dlg.pivot = new Vector2(0.5f, 0);
             var dlgGroup = dlg.gameObject.AddComponent<CanvasGroup>();
             dlgGroup.blocksRaycasts = false;
-            MakeImage(MakeRect("Band", dlg, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero), new Color(0.01f, 0.01f, 0.02f, 0.72f), line);
+            MakeImage(MakeRect("Band", dlg, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero), new Color(0.01f, 0.01f, 0.02f, 0.88f), line);
             MakeImage(MakeRect("LineTop", dlg, new Vector2(0, 1), new Vector2(1, 1), Vector2.zero, new Vector2(0, 2)), GuideLine, line);
             MakeImage(MakeRect("LineBottom", dlg, new Vector2(0, 0), new Vector2(1, 0), Vector2.zero, new Vector2(0, 2)), GuideLine, line);
             var orn = MakeRect("Ornament", dlg, new Vector2(0.5f, 1), new Vector2(0.5f, 1), Vector2.zero, new Vector2(16, 16));
@@ -207,7 +208,7 @@ namespace NasconGJ.EditorTools.Generation
             var card = MakeRect("Card", holder, Center, Center, Vector2.zero, new Vector2(10, 76));
             MakeImage(card, new Color(0.02f, 0.012f, 0.02f, 0.9f), rounded).type = Image.Type.Sliced;
             var cardOutline = card.gameObject.AddComponent<Outline>();
-            cardOutline.effectColor = new Color(1f, 0.62f, 0.28f, 0.45f);
+            cardOutline.effectColor = new Color(1f, 0.62f, 0.28f, 0.8f);
             cardOutline.effectDistance = new Vector2(1.5f, -1.5f);
             var layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(18, 30, 11, 11);

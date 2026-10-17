@@ -27,6 +27,14 @@ Shader "NASCON/ComicPost"
         Pass
         {
             Name "ComicPost"
+            Stencil
+            {
+                Ref 64
+                ReadMask 64
+                WriteMask 0
+                Comp NotEqual
+                Pass Keep
+            }
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag

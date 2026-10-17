@@ -25,6 +25,14 @@ Shader "NASCON/PainterlyPost"
         Pass
         {
             Name "Painterly"
+            Stencil
+            {
+                Ref 64
+                ReadMask 64
+                WriteMask 0
+                Comp NotEqual
+                Pass Keep
+            }
 
             HLSLPROGRAM
             #pragma vertex Vert

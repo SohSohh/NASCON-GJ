@@ -11,6 +11,9 @@ Shader "NASCON/StylizedFlame"
         [HDR] _CoreColor("Core Color", Color) = (3.2, 2.7, 2.0, 1)
         [HDR] _EdgeColor("Rim Color", Color) = (0.9, 1.6, 1.5, 1)
         _Intensity("Body Intensity", Range(0, 8)) = 2.4
+        _BodyTint("Body Tint", Color) = (1, 1, 1, 1)
+        [Toggle] _GBCameraBypass("Bypass GB Camera Palette", Float) = 0
+        [HideInInspector] _GBCameraStencilMask("GB Camera Stencil Mask", Float) = 0
         _InteractionHighlight("Interaction Highlight", Float) = 0
         _InteractionOutline("Interaction Outline", Float) = 0
         _OutlineWidth("Outline Width (alpha)", Range(0.001, 0.2)) = 0.06
@@ -36,6 +39,15 @@ Shader "NASCON/StylizedFlame"
             Name "Flame"
             Tags { "LightMode" = "UniversalForward" }
 
+            // Bit 7 skips GBCamera; bit 6 preserves guide colour through painterly/comic passes.
+            Stencil
+            {
+                Ref 192
+                WriteMask [_GBCameraStencilMask]
+                Comp Always
+                Pass Replace
+            }
+
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
@@ -49,6 +61,8 @@ Shader "NASCON/StylizedFlame"
                 half4 _CoreColor;
                 half4 _EdgeColor;
                 half _Intensity;
+                half4 _BodyTint;
+                half _GBCameraBypass;
                 half _InteractionHighlight;
                 half _InteractionOutline;
                 half _OutlineWidth;
@@ -102,10 +116,12 @@ Shader "NASCON/StylizedFlame"
                 half cut = _Cutoff + (n - 0.8h) * 2.5h * _NoiseAmount;
 
                 half mask = smoothstep(cut - _Softness, cut + _Softness, shape);
+                // Only visible flame pixels may exclude the palette, never the transparent quad.
+                if (_GBCameraBypass > 0.5h) clip(mask - 0.02h);
                 half core = smoothstep(cut + _CoreThreshold, cut + _CoreThreshold + 0.15h, shape);
                 half rim = 1.0h - smoothstep(cut, cut + _RimWidth, shape);
 
-                half3 col = input.color.rgb * _Intensity;
+                half3 col = input.color.rgb * _BodyTint.rgb * _Intensity;
                 col = lerp(col, _EdgeColor.rgb * max(input.color.rgb, 0.4h), rim * _RimAmount);
                 col = lerp(col, _CoreColor.rgb, core);
                 col += half3(1.0h, 0.62h, 0.18h) * _InteractionHighlight * (0.25h + rim);
