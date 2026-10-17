@@ -52,6 +52,7 @@ namespace NasconGJ.Tutorial
             HoldGuide(true); // it waits beside you until you have the torch
             HUDController.SuppressLowFuelWarning = true;
 
+            RestOnTop(stick);
             SetGate(pitGate, true);
             SetGate(narrowsGate, true);
             Protect(droppedTorch, 0.25f);
@@ -63,7 +64,7 @@ namespace NasconGJ.Tutorial
             for (float t = 0f; guide != null && guide.IsTalking && t < 12f; t += Time.deltaTime) yield return null;
             Glint(droppedTorch, true);
             Objective("Your torch fell beside you");
-            Hint("E", "Pick up", () => Holding(droppedTorch));
+            Hint("F", "Pick up", () => Holding(droppedTorch));
             while (!Holding(droppedTorch)) yield return null;
             Glint(droppedTorch, false);
             SetGate(pitGate, false);
@@ -89,7 +90,7 @@ namespace NasconGJ.Tutorial
             Flame(droppedTorch)?.SetFuel(0.07f); // spent: it gutters out a few seconds later
             Protect(stick, 0.35f);
             Objective("Take the burning stick");
-            Hint("E", "Pick up", () => Holding(stick));
+            Hint("F", "Pick up", () => Holding(stick));
             while (!Holding(stick)) yield return null;
             Glint(stick, false);
             SetGate(narrowsGate, false);
@@ -107,25 +108,59 @@ namespace NasconGJ.Tutorial
             while (!hallEntrance.EverEntered) yield return null;
             Glint(freshTorch, true);
             Objective("Take the fresh torch by the entrance");
-            Hint("E", "Pick up", () => Holding(freshTorch));
+            Hint("F", "Pick up", () => Holding(freshTorch));
             float waited = 0f;
             while (!Holding(freshTorch) && waited < 25f) { waited += Time.deltaTime; yield return null; }
             Glint(freshTorch, false);
             Protect(stick, 0f);
             HUDController.SuppressLowFuelWarning = false;
 
+            // ---------- 6. the shadow lesson, taught by what the real shadows do in front of you
             Objective("Cross the hall. Stay in the light");
-            Hint("F", "Light a brazier to push shadows back", null, 6f);
-            yield return new WaitForSeconds(7f);
-            if (inventory.GetSlot(0) != null && inventory.GetSlot(1) != null)
-            {
-                Hint("1 / 2", "Switch hands", null, 4f);
-                yield return new WaitForSeconds(5f);
-                Hint("G", "Set a light down", null, 4f);
-            }
+            Hint("F", "Look at an unlit brazier, hold to light it. Light pushes shadows back", null, 6f);
+            StartCoroutine(ShadowLesson());
 
             while (!exitApproach.EverEntered) yield return null;
             Objective("Reach the light");
+        }
+
+        /// <summary>
+        /// Explains each shadow rule the first time the player sees it happen: they only move in the dark,
+        /// light pins them in place, and up close they drink your flame.
+        /// </summary>
+        private IEnumerator ShadowLesson()
+        {
+            var player = inventory.transform;
+            var shadows = FindObjectsByType<NasconGJ.Entities.ShadowEnemy>();
+            bool moved = false, held = false, fed = false;
+            while (!(moved && held && fed) && !exitApproach.EverEntered)
+            {
+                foreach (var s in shadows)
+                {
+                    if (s == null || Vector3.Distance(s.transform.position, player.position) > 18f) continue;
+                    var st = s.Current;
+                    if (!moved && (st == NasconGJ.Entities.ShadowEnemy.State.Approach || st == NasconGJ.Entities.ShadowEnemy.State.Herd))
+                    {
+                        moved = true;
+                        Objective("Something moves in the dark. Keep it in your light");
+                        Hint("", "Shadows can only move in the dark", null, 5f);
+                        yield return new WaitForSeconds(5.5f);
+                    }
+                    else if (moved && !held && st == NasconGJ.Entities.ShadowEnemy.State.Frozen)
+                    {
+                        held = true;
+                        Hint("", "Caught in your light, it can't move", null, 4.5f);
+                        yield return new WaitForSeconds(5f);
+                    }
+                    else if (!fed && st == NasconGJ.Entities.ShadowEnemy.State.Drain)
+                    {
+                        fed = true;
+                        Hint("", "Too close: it drinks your flame. Back away, or light a brazier", null, 6f);
+                        yield return new WaitForSeconds(6.5f);
+                    }
+                }
+                yield return null;
+            }
         }
 
         private void OnDestroy() => HUDController.SuppressLowFuelWarning = false;
@@ -153,6 +188,27 @@ namespace NasconGJ.Tutorial
             var g = item.GetComponent<InterestGlint>() ?? item.gameObject.AddComponent<InterestGlint>();
             if (glintMaterial != null) g.SetSparkMaterial(glintMaterial);
             g.SetActive(on);
+        }
+
+        /// <summary>
+        /// Sit a tutorial item on the visible top of whatever it rests on and hold it there (physics would let it sink
+        /// to the collider top, which can be under the visible surface, half-burying it and hiding it from the aim).
+        /// </summary>
+        private static void RestOnTop(CarryableItem item)
+        {
+            if (item == null) return;
+            var col = item.GetComponent<Collider>();
+            var body = item.GetComponent<Rigidbody>();
+            if (body != null) body.isKinematic = true;
+            Vector3 p = item.transform.position;
+            float top = float.MinValue;
+            foreach (var r in Physics.OverlapBox(p, new Vector3(0.3f, 0.4f, 0.3f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (r.transform.IsChildOf(item.transform)) continue;
+                var rend = r.GetComponent<Renderer>();
+                if (rend != null && rend.bounds.max.y < p.y + 0.15f) top = Mathf.Max(top, rend.bounds.max.y);
+            }
+            if (top > float.MinValue && col != null) item.transform.position += Vector3.up * (top + 0.01f - col.bounds.min.y);
         }
 
         private static void SetGate(GameObject gate, bool closed)

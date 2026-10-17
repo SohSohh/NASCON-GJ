@@ -88,12 +88,14 @@ namespace NasconGJ.UI
         private void UpdatePrompt()
         {
             string prompt = "";
-            if (!DialogueUI.IsOpen && (death == null || !death.IsDead))
+            // one prompt at a time, and none while a tutorial hint is already saying it
+            bool hintUp = HintUI.Instance != null && HintUI.Instance.IsShowing;
+            if (!DialogueUI.IsOpen && (death == null || !death.IsDead) && !hintUp)
             {
-                if (carrier.TransferTarget != null)
-                    prompt = $"<mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark>  <color=#FFF4E8><b>Hold</b></color>  pass the flame to the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}";
-                if (interactor.Current != null)
-                    prompt = (prompt.Length > 0 ? prompt + "\n" : "") + $"<mark=#130A06E8><color=#FFD084><b>[E]</b></color></mark>  <color=#FFF4E8>{interactor.Current.Prompt.ToLowerInvariant()}</color>";
+                if (carrier.TransferTarget != null) // lighting comes first; once it burns, the same key picks it up
+                    prompt = $"<mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark>  <color=#FFF4E8><b>Hold</b></color>  light the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}";
+                else if (interactor.Current != null)
+                    prompt = $"<mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark>  <color=#FFF4E8>{interactor.Current.Prompt.ToLowerInvariant()}</color>";
             }
             promptText.text = prompt;
         }
@@ -108,7 +110,7 @@ namespace NasconGJ.UI
             fuelFill.anchorMax = new Vector2(fuel, 1f);
             fuelFillImage.color = fuelColor.Evaluate(fuel);
 
-            if (show && fuel < 0.3f && lowFuelWarned != flame && !SuppressLowFuelWarning && HintUI.Instance != null)
+            if (show && fuel < 0.3f && lowFuelWarned != flame && !SuppressLowFuelWarning && HintUI.Instance != null && SomethingToBurnNear(flame))
             {
                 lowFuelWarned = flame;
                 HintUI.Instance.Show("", "Your flame is dying.  Find something that burns.", 4.5f);
@@ -116,7 +118,7 @@ namespace NasconGJ.UI
 
             var active = inventory.ActiveItem;
             var other = inventory.OtherItem;
-            slotText.text = $"[{inventory.ActiveSlot + 1}] {(active != null ? active.ItemName : "empty")}" +
+            slotText.text = (other == null ? (active != null ? active.ItemName : "") : $"[{inventory.ActiveSlot + 1}] {(active != null ? active.ItemName : "empty")}") +
                             (other != null ? $"   <alpha=#66>[{2 - inventory.ActiveSlot}] {other.ItemName}" : "");
         }
 
@@ -127,6 +129,15 @@ namespace NasconGJ.UI
         {
             ShowMessage(death != null ? death.DeathReason : "You were consumed.", 10f);
             if (ScreenFader.Instance != null) ScreenFader.Instance.FadeTo(1f, 2.5f);
+        }
+
+        /// <summary>Only tell the player to find fuel when there is some within reach (a torch, a stick, a brazier).</summary>
+        private static bool SomethingToBurnNear(FlammableItem held)
+        {
+            Vector3 p = held.transform.position;
+            foreach (var f in FindObjectsByType<FlammableItem>())
+                if (f != held && (f.transform.position - p).sqrMagnitude < 22f * 22f) return true;
+            return false;
         }
 
         public void ShowMessage(string text, float duration)

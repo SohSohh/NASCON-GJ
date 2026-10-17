@@ -26,7 +26,7 @@ namespace NasconGJ.EditorTools
             allPassed &= Assert("Light Exposure Calculations", Test_LightExposureCalculations());
             allPassed &= Assert("Proximity Model & Drain Curve", Test_ProximityAndDrainCurve());
             allPassed &= Assert("State Weights", Test_StateWeights());
-            allPassed &= Assert("Drain Stacking and 150% Cap", Test_DrainStackingAndCapping());
+            allPassed &= Assert("Drain Stacking and Cap", Test_DrainStackingAndCapping());
             allPassed &= Assert("Single-Herder Coordination", Test_SingleHerderCoordination());
             allPassed &= Assert("Frozen Resume Delay Logic", Test_FrozenResumeLogic());
 
@@ -102,13 +102,13 @@ namespace NasconGJ.EditorTools
 
         private static bool Test_StateWeights()
         {
-            // Verify weight mapping specified in design doc
-            // Observe: 0, Approach: 0.25, Drain: 1.0, Herd: 0.75, Frozen: 0
+            // Observe: 0, Approach: 0.25, Drain: 1.0, Herd: 0.75, Frozen: 0.45 (only within frozenFeedDistance), Dormant: 0
             float GetWeight(ShadowEnemy.State state) => state switch
             {
                 ShadowEnemy.State.Approach => 0.25f,
                 ShadowEnemy.State.Drain => 1.0f,
                 ShadowEnemy.State.Herd => 0.75f,
+                ShadowEnemy.State.Frozen => 0.45f,
                 _ => 0f
             };
 
@@ -116,7 +116,7 @@ namespace NasconGJ.EditorTools
             if (GetWeight(ShadowEnemy.State.Approach) != 0.25f) return false;
             if (GetWeight(ShadowEnemy.State.Drain) != 1.0f) return false;
             if (GetWeight(ShadowEnemy.State.Herd) != 0.75f) return false;
-            if (GetWeight(ShadowEnemy.State.Frozen) != 0f) return false;
+            if (GetWeight(ShadowEnemy.State.Frozen) != 0.45f) return false;
             if (GetWeight(ShadowEnemy.State.Dormant) != 0f) return false;
 
             return true;
@@ -124,28 +124,14 @@ namespace NasconGJ.EditorTools
 
         private static bool Test_DrainStackingAndCapping()
         {
-            const float maxDrainPerEnemy = 0.5f;
-            const float maxStackedDrain = 1.5f;
+            // Close shadows are meant to be felt: one at full drain burns the flame 4x as fast, the stack caps at 6x.
+            const float maxDrainPerEnemy = 3f;
+            const float maxStackedDrain = 5f;
 
-            // 1 enemy at full drain
-            float oneEnemy = maxDrainPerEnemy * 1.0f * 1.0f; // 0.5
-            float total1 = Mathf.Min(oneEnemy, maxStackedDrain);
-            if (Mathf.Abs(total1 - 0.5f) > 0.001f) return false; // +50% burn
-
-            // 2 enemies at full drain
-            float twoEnemies = oneEnemy * 2f; // 1.0
-            float total2 = Mathf.Min(twoEnemies, maxStackedDrain);
-            if (Mathf.Abs(total2 - 1.0f) > 0.001f) return false; // +100% burn
-
-            // 3 enemies at full drain
-            float threeEnemies = oneEnemy * 3f; // 1.5
-            float total3 = Mathf.Min(threeEnemies, maxStackedDrain);
-            if (Mathf.Abs(total3 - 1.5f) > 0.001f) return false; // +150% burn
-
-            // 4 enemies at full drain
-            float fourEnemies = oneEnemy * 4f; // 2.0
-            float total4 = Mathf.Min(fourEnemies, maxStackedDrain);
-            if (Mathf.Abs(total4 - 1.5f) > 0.001f) return false; // capped at +150% burn
+            float oneEnemy = maxDrainPerEnemy * 1.0f * 1.0f; // 3
+            if (Mathf.Abs(Mathf.Min(oneEnemy, maxStackedDrain) - 3f) > 0.001f) return false;       // +300% burn
+            if (Mathf.Abs(Mathf.Min(oneEnemy * 2f, maxStackedDrain) - 5f) > 0.001f) return false;  // capped at +500%
+            if (Mathf.Abs(Mathf.Min(oneEnemy * 4f, maxStackedDrain) - 5f) > 0.001f) return false;  // still capped
 
             return true;
         }

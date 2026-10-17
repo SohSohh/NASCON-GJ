@@ -40,7 +40,7 @@ namespace NasconGJ.EditorTools.Generation
                 "Deeper. I'll be waiting.");
 
             Make(Sandbox, "sandbox",
-                "Sandbox guiding light. <color=#FFB060>[E]</color> or click to advance.",
+                "Sandbox guiding light. <color=#FFB060>[F]</color> or click to advance.",
                 "Try: pass fire to the stick, drop it, cover your flame near the shadow on the north wall.",
                 "Let your flame die to test the darkness seeker.");
 

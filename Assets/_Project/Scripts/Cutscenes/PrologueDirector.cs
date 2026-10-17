@@ -34,138 +34,138 @@ namespace NasconGJ.Cutscenes
         }
 
         [Header("Rig")]
-        [SerializeField] private Camera cam;
-        [SerializeField] private CutsceneUI ui;
-        [SerializeField] private Light sun;
-        [SerializeField] private Volume outdoorVolume;
+        [SerializeField] protected Camera cam;
+        [SerializeField] protected CutsceneUI ui;
+        [SerializeField] protected Light sun;
+        [SerializeField] protected Volume outdoorVolume;
 
         [Header("1. The living town")]
-        [SerializeField] private Transform craneFrom;
-        [SerializeField] private Transform craneTo;
-        [SerializeField] private int dollyVillager;
-        [SerializeField] private Villager[] villagers;
+        [SerializeField] protected Transform craneFrom;
+        [SerializeField] protected Transform craneTo;
+        [SerializeField] protected int dollyVillager;
+        [SerializeField] protected Villager[] villagers;
         [Tooltip("Shadow left on the wall behind each villager (same order; entries may be empty).")]
-        [SerializeField] private ShadowFigure[] imprints;
-        [SerializeField] private Light[] lamps;
-        [SerializeField] private Renderer[] glowingWindows;
+        [SerializeField] protected ShadowFigure[] imprints;
+        [SerializeField] protected Light[] lamps;
+        [SerializeField] protected Renderer[] glowingWindows;
 
         [Header("2. The Void")]
-        [SerializeField] private VoidApparition voidApparition;
-        [SerializeField] private Light voidWash;
-        [SerializeField] private float voidWashIntensity = 40f;
-        [SerializeField] private Transform riseFrom;
-        [SerializeField] private Transform riseTo;
-        [SerializeField] private Transform takenFrom;
-        [SerializeField] private Transform takenTo;
-        [SerializeField] private float[] takenDelays = { 3.0f, 1.2f, 1.9f, 2.6f, 3.3f, 3.7f, 4.1f };
-        [SerializeField] private Transform darkFrom;
-        [SerializeField] private Transform darkTo;
+        [SerializeField] protected VoidApparition voidApparition;
+        [SerializeField] protected Light voidWash;
+        [SerializeField] protected float voidWashIntensity = 40f;
+        [SerializeField] protected Transform riseFrom;
+        [SerializeField] protected Transform riseTo;
+        [SerializeField] protected Transform takenFrom;
+        [SerializeField] protected Transform takenTo;
+        [SerializeField] protected float[] takenDelays = { 3.0f, 1.2f, 1.9f, 2.6f, 3.3f, 3.7f, 4.1f };
+        [SerializeField] protected Transform darkFrom;
+        [SerializeField] protected Transform darkTo;
         [Tooltip("Reaction close-up: someone looks up and sees it.")]
-        [SerializeField] private Transform lookUpFrom;
-        [SerializeField] private Transform lookUpTo;
+        [SerializeField] protected Transform lookUpFrom;
+        [SerializeField] protected Transform lookUpTo;
         [Tooltip("Behind the townsfolk, looking down the street as the darkness floods toward the lens.")]
-        [SerializeField] private Transform floodFrom;
-        [SerializeField] private Transform floodTo;
+        [SerializeField] protected Transform floodFrom;
+        [SerializeField] protected Transform floodTo;
         [Tooltip("Afterwards: slow push in on the shadows burned into the walls.")]
-        [SerializeField] private Transform imprintFrom;
-        [SerializeField] private Transform imprintTo;
-        [SerializeField] private Light imprintLight;
-        [SerializeField] private float floodRadius = 140f;
-        [SerializeField] private float floodSoftness = 6f;
+        [SerializeField] protected Transform imprintFrom;
+        [SerializeField] protected Transform imprintTo;
+        [SerializeField] protected Light imprintLight;
+        [SerializeField] protected float floodRadius = 140f;
+        [SerializeField] protected float floodSoftness = 6f;
 
         [Header("3–5. The bearer")]
-        [SerializeField] private CutsceneActor bearer;
+        [SerializeField] protected CutsceneActor bearer;
         [Header("Rooftop (present day)")]
-        [SerializeField] private Villager girl;
-        [SerializeField] private Transform roofBearer;
-        [SerializeField] private Transform roofWideFrom, roofWideTo, roofGirl, roofBearerCam, roofLookUp, roofVoid;
-        [SerializeField] private MemoryFall memoryFall;
+        [SerializeField] protected Villager girl;
+        [SerializeField] protected Transform roofBearer;
+        [SerializeField] protected Transform roofWideFrom, roofWideTo, roofGirl, roofBearerCam, roofLookUp, roofVoid;
+        [SerializeField] protected MemoryFall memoryFall;
         [Header("Voice-over (played in order, one per Line)")]
-        [SerializeField] private AudioSource voice;
-        [SerializeField] private AudioClip[] voiceLines;
-        private int voiceIndex;
-        [SerializeField] private AudioSource stormAmbience;
+        [SerializeField] protected AudioSource voice;
+        [SerializeField] protected AudioClip[] voiceLines;
+        protected int voiceIndex;
+        [SerializeField] protected AudioSource stormAmbience;
         [Header("Sound design")]
-        [SerializeField] private AudioSource thunderSource;   // the long thunder roll (AMB_RainThunder), cued per strike
-        [SerializeField] private AudioSource windAmbience;    // the Void's wind
-        [SerializeField] private AudioSource lowSource;       // pitched-down one-shots (impacts, crackle)
-        [SerializeField] private AudioClip laughClip, crackleClip, swishHeavyClip;
-        [SerializeField] private AudioClip fallClip, cryClip;
-        [SerializeField] private AudioSource insideAmbience;   // dripping dark inside the tomb
-        [SerializeField] private AudioSource padSource;        // a lone pad under the walk to the tomb
-        [SerializeField] private Transform[] walkPath;
-        [SerializeField] private Vector3 followStart = new(0.5f, 1.55f, 1.7f);   // chest-up, in front: the torch passing the lens
-        [SerializeField] private Vector3 followEnd = new(1.8f, 1.6f, 0.9f);      // drifting out to the side
-        [SerializeField] private Transform tombFrom;
-        [SerializeField] private Transform tombTo;
-        [SerializeField] private Transform doorwayFrom;
-        [SerializeField] private Transform doorwayTo;
-        [SerializeField] private Transform[] tombPath;
-        [SerializeField] private Light lightning;
-        [SerializeField] private Transform[] insidePath;
-        [SerializeField] private Vector3 shoulderOffset = new(0.55f, 1.8f, -2.3f);
-        [SerializeField] private Rigidbody[] collapsePieces;
-        [SerializeField] private ParticleSystem collapseDust;
+        [SerializeField] protected AudioSource thunderSource;   // the long thunder roll (AMB_RainThunder), cued per strike
+        [SerializeField] protected AudioSource windAmbience;    // the Void's wind
+        [SerializeField] protected AudioSource lowSource;       // pitched-down one-shots (impacts, crackle)
+        [SerializeField] protected AudioClip laughClip, crackleClip, swishHeavyClip;
+        [SerializeField] protected AudioClip fallClip, cryClip;
+        [SerializeField] protected AudioSource insideAmbience;   // dripping dark inside the tomb
+        [SerializeField] protected AudioSource padSource;        // a lone pad under the walk to the tomb
+        [SerializeField] protected Transform[] walkPath;
+        [SerializeField] protected Vector3 followStart = new(0.5f, 1.55f, 1.7f);   // chest-up, in front: the torch passing the lens
+        [SerializeField] protected Vector3 followEnd = new(1.8f, 1.6f, 0.9f);      // drifting out to the side
+        [SerializeField] protected Transform tombFrom;
+        [SerializeField] protected Transform tombTo;
+        [SerializeField] protected Transform doorwayFrom;
+        [SerializeField] protected Transform doorwayTo;
+        [SerializeField] protected Transform[] tombPath;
+        [SerializeField] protected Light lightning;
+        [SerializeField] protected Transform[] insidePath;
+        [SerializeField] protected Vector3 shoulderOffset = new(0.55f, 1.8f, -2.3f);
+        [SerializeField] protected Rigidbody[] collapsePieces;
+        [SerializeField] protected ParticleSystem collapseDust;
 
         [Header("Audio")]
-        [SerializeField] private AudioSource music;
-        [SerializeField] private AudioSource dread;
-        [SerializeField] private AudioSource sfx;
-        [SerializeField] private AudioClip thunderClip;
-        [SerializeField] private AudioClip collapseClip;
-        [SerializeField] private AudioClip impactClip;
-        [SerializeField] private AudioSource townAmbience;
-        [SerializeField] private AudioSource townMurmur;
-        [SerializeField] private AudioClip whooshClip;
-        [SerializeField] private AudioClip riserClip;
-        [SerializeField] private AudioClip boomClip;
-        [SerializeField] private AudioClip ringClip;
-        [SerializeField] private AudioClip heartbeatClip;
+        [SerializeField] protected AudioSource music;
+        [SerializeField] protected AudioSource dread;
+        [SerializeField] protected AudioSource sfx;
+        [SerializeField] protected AudioClip thunderClip;
+        [SerializeField] protected AudioClip collapseClip;
+        [SerializeField] protected AudioClip impactClip;
+        [SerializeField] protected AudioSource townAmbience;
+        [SerializeField] protected AudioSource townMurmur;
+        [SerializeField] protected AudioClip whooshClip;
+        [SerializeField] protected AudioClip riserClip;
+        [SerializeField] protected AudioClip boomClip;
+        [SerializeField] protected AudioClip ringClip;
+        [SerializeField] protected AudioClip heartbeatClip;
 
         [Header("Atmospheres")]
-        [SerializeField] private Atmosphere day = new()
+        [SerializeField] protected Atmosphere day = new()
         {
             sky = new Color(0.55f, 0.78f, 0.98f), ambient = new Color(0.5f, 0.47f, 0.55f), fog = new Color(0.72f, 0.82f, 0.95f),
             sun = new Color(1f, 0.9f, 0.72f), fogDensity = 0.004f, sunIntensity = 2.1f, sunEuler = new Vector3(32f, 28f, 0f), outdoor = 1f, palette = 0.85f,
         };
-        [SerializeField] private Atmosphere theVoid = new()
+        [SerializeField] protected Atmosphere theVoid = new()
         {
             sky = new Color(0.85f, 0.2f, 0.09f), ambient = new Color(0.16f, 0.05f, 0.07f), fog = new Color(0.55f, 0.12f, 0.07f),
             sun = new Color(0.9f, 0.22f, 0.1f), fogDensity = 0.0028f, sunIntensity = 0.45f, sunEuler = new Vector3(10f, 28f, 0f), outdoor = 1f, palette = 0.35f,
         };
-        [SerializeField] private Atmosphere waste = new()
+        [SerializeField] protected Atmosphere waste = new()
         {
             sky = new Color(0.16f, 0.09f, 0.15f), ambient = new Color(0.14f, 0.09f, 0.14f), fog = new Color(0.17f, 0.1f, 0.15f),
             sun = new Color(0.6f, 0.62f, 0.95f), fogDensity = 0.03f, sunIntensity = 0.55f, sunEuler = new Vector3(25f, -50f, 0f), outdoor = 0.85f,
         };
-        [SerializeField] private Atmosphere storm = new()
+        [SerializeField] protected Atmosphere storm = new()
         {
             sky = new Color(0.1f, 0.095f, 0.17f), ambient = new Color(0.15f, 0.13f, 0.2f), fog = new Color(0.11f, 0.1f, 0.17f),
             sun = new Color(0.55f, 0.6f, 0.95f), fogDensity = 0.014f, sunIntensity = 0.95f, sunEuler = new Vector3(24f, 15f, 0f), outdoor = 1f,
         };
-        [SerializeField] private Atmosphere tomb = new()
+        [SerializeField] protected Atmosphere tomb = new()
         {
             sky = Color.black, ambient = new Color(0.035f, 0.02f, 0.04f), fog = new Color(0.02f, 0.01f, 0.02f),
             sun = Color.black, fogDensity = 0.05f, sunIntensity = 0f, sunEuler = new Vector3(90f, 0f, 0f), outdoor = 0.25f,
         };
 
         [Header("Skip")]
-        [SerializeField] private float holdToSkip = 1.2f;
+        [SerializeField] protected float holdToSkip = 1.2f;
 
-        private static readonly int PaletteReduceId = Shader.PropertyToID("_NasconPaletteReduce");
-        private static readonly int SkyTopId = Shader.PropertyToID("_NasconSkyTop");
-        private static readonly int SkyHorizonId = Shader.PropertyToID("_NasconSkyHorizon");
-        private static readonly int SkyCloudId = Shader.PropertyToID("_NasconSkyCloud");
-        private static readonly int SkyGlowId = Shader.PropertyToID("_NasconSkyGlow");
-        private static readonly int SkyGlowDirId = Shader.PropertyToID("_NasconSkyGlowDir");
+        protected static readonly int PaletteReduceId = Shader.PropertyToID("_NasconPaletteReduce");
+        protected static readonly int SkyTopId = Shader.PropertyToID("_NasconSkyTop");
+        protected static readonly int SkyHorizonId = Shader.PropertyToID("_NasconSkyHorizon");
+        protected static readonly int SkyCloudId = Shader.PropertyToID("_NasconSkyCloud");
+        protected static readonly int SkyGlowId = Shader.PropertyToID("_NasconSkyGlow");
+        protected static readonly int SkyGlowDirId = Shader.PropertyToID("_NasconSkyGlowDir");
 
-        private Vector3 basePos;
-        private Quaternion baseRot = Quaternion.identity;
-        private float shake, skipHeld, skipShown;
-        private bool ending;
-        private Coroutine cameraRoutine, runRoutine;
+        protected Vector3 basePos;
+        protected Quaternion baseRot = Quaternion.identity;
+        protected float shake, skipHeld, skipShown;
+        protected bool ending;
+        protected Coroutine cameraRoutine, runRoutine;
 
-        private void Start()
+        protected void Start()
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -175,7 +175,7 @@ namespace NasconGJ.Cutscenes
             runRoutine = StartCoroutine(Run());
         }
 
-        private void OnDestroy()
+        protected void OnDestroy()
         {
             Shader.SetGlobalFloat(PaletteReduceId, 0f);
             ComicLook.SetVoid(Vector3.zero, 0f, 1f);
@@ -185,7 +185,7 @@ namespace NasconGJ.Cutscenes
 
         // ------------------------------------------------------------ the film
 
-        private IEnumerator Run()
+        protected virtual IEnumerator Run()
         {
             ui.Letterbox(true, 0.01f);
             Apply(day);
@@ -382,10 +382,10 @@ namespace NasconGJ.Cutscenes
             Finish();
         }
 
-        private const string GirlName = "YUNA", BearerName = "REN";
+        protected const string GirlName = "YUNA", BearerName = "REN";
 
         /// <summary>Cue the long thunder roll from the storm recording (its big crack is ~14 s in).</summary>
-        private void ThunderRoll(float volume)
+        protected void ThunderRoll(float volume)
         {
             if (thunderSource == null || thunderSource.clip == null) return;
             thunderSource.Stop();
@@ -395,7 +395,7 @@ namespace NasconGJ.Cutscenes
             StartCoroutine(StopAfter(thunderSource, thunderSource.clip.length));
         }
 
-        private IEnumerator StopAfter(AudioSource s, float seconds)
+        protected IEnumerator StopAfter(AudioSource s, float seconds)
         {
             yield return new WaitForSeconds(seconds - 1.2f);
             yield return FadeAudio(s, 0f, 1.2f);
@@ -403,7 +403,7 @@ namespace NasconGJ.Cutscenes
         }
 
         /// <summary>One-shot played slowed down (heavier, deeper) on its own source.</summary>
-        private void PlayLow(AudioClip clip, float pitch, float volume)
+        protected void PlayLow(AudioClip clip, float pitch, float volume)
         {
             if (lowSource == null || clip == null) return;
             lowSource.pitch = pitch;
@@ -411,7 +411,7 @@ namespace NasconGJ.Cutscenes
         }
 
         /// <summary>Narrow the lens while falling, so the pit seems to swallow the shot.</summary>
-        private IEnumerator FovDive(float duration)
+        protected IEnumerator FovDive(float duration)
         {
             float from = cam.fieldOfView;
             for (float t = 0f; t < duration; t += Time.deltaTime)
@@ -421,7 +421,7 @@ namespace NasconGJ.Cutscenes
             }
         }
 
-        private IEnumerator SnapAfter(float delay)
+        protected IEnumerator SnapAfter(float delay)
         {
             yield return new WaitForSeconds(delay);
             yield return new WaitForEndOfFrame();
@@ -429,7 +429,7 @@ namespace NasconGJ.Cutscenes
         }
 
         /// <summary>A spoken line as a caption (speaker in gold), held long enough to read, then the next cut.</summary>
-        private IEnumerator Line(string speaker, string text, float extra)
+        protected IEnumerator Line(string speaker, string text, float extra)
         {
             int words = text.Split(' ').Length;
             float hold = 0.7f + words * 0.26f + extra;
@@ -441,7 +441,7 @@ namespace NasconGJ.Cutscenes
         }
 
         /// <summary>A thunderbolt hit: lightning around the Void, two hard impact frames, a crack of thunder, a jolt.</summary>
-        private IEnumerator Thunderbolt()
+        protected IEnumerator Thunderbolt()
         {
             if (voidApparition != null) voidApparition.Strike();
             if (sfx != null && thunderClip != null) sfx.PlayOneShot(thunderClip, 1f);
@@ -456,18 +456,18 @@ namespace NasconGJ.Cutscenes
             ComicLook.SetImpact(0f);
         }
 
-        private void Cut()
+        protected void Cut()
         {
             if (sfx != null && whooshClip != null) sfx.PlayOneShot(whooshClip, 0.35f);
         }
 
-        private static IEnumerator LookUp(Villager v, Transform target, float delay)
+        protected static IEnumerator LookUp(Villager v, Transform target, float delay)
         {
             yield return new WaitForSeconds(delay);
             if (v != null && target != null) v.LookAt(target);
         }
 
-        private IEnumerator TakeVillager(int i, float delay)
+        protected IEnumerator TakeVillager(int i, float delay)
         {
             yield return new WaitForSeconds(delay);
             if (villagers[i] != null) villagers[i].Shadowify(1.4f);
@@ -475,7 +475,7 @@ namespace NasconGJ.Cutscenes
             if (imprints != null && i < imprints.Length && imprints[i] != null) StartCoroutine(FadeFigure(imprints[i], 0.85f, 0f, 1.4f));
         }
 
-        private IEnumerator LightsOut(float duration)
+        protected IEnumerator LightsOut(float duration)
         {
             int total = lamps.Length + glowingWindows.Length;
             float step = total > 0 ? duration / total : 0f;
@@ -502,7 +502,7 @@ namespace NasconGJ.Cutscenes
             foreach (var l in lamps) if (l != null && l.intensity > 0f) StartCoroutine(Gutter(l));
         }
 
-        private static IEnumerator Gutter(Light l)
+        protected static IEnumerator Gutter(Light l)
         {
             float start = l.intensity;
             for (float t = 0f; t < 0.6f; t += Time.deltaTime)
@@ -513,7 +513,7 @@ namespace NasconGJ.Cutscenes
             l.intensity = 0f;
         }
 
-        private IEnumerator Lightning()
+        protected IEnumerator Lightning()
         {
             Color sky = cam.backgroundColor;
             float[] pulses = { 1f, 0.15f, 0.8f, 0f };
@@ -537,7 +537,7 @@ namespace NasconGJ.Cutscenes
             if (sfx != null && thunderClip != null) sfx.PlayOneShot(thunderClip, 0.9f);
         }
 
-        private IEnumerator Shake(float duration, float amount)
+        protected IEnumerator Shake(float duration, float amount)
         {
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
@@ -547,7 +547,7 @@ namespace NasconGJ.Cutscenes
             shake = 0f;
         }
 
-        private static IEnumerator FadeLight(Light l, float to, float duration)
+        protected static IEnumerator FadeLight(Light l, float to, float duration)
         {
             if (l == null) yield break;
             float from = l.intensity;
@@ -559,7 +559,7 @@ namespace NasconGJ.Cutscenes
             l.intensity = to;
         }
 
-        private static IEnumerator FadeFigure(ShadowFigure figure, float opacity, float glow, float duration)
+        protected static IEnumerator FadeFigure(ShadowFigure figure, float opacity, float glow, float duration)
         {
             if (figure == null) yield break;
             for (float t = 0f; t < duration; t += Time.deltaTime)
@@ -573,14 +573,14 @@ namespace NasconGJ.Cutscenes
 
         // ------------------------------------------------------------ camera
 
-        private void CameraMove(Transform from, Transform to, float duration, float fovFrom, float fovTo)
+        protected void CameraMove(Transform from, Transform to, float duration, float fovFrom, float fovTo)
         {
             if (from == null || to == null) return;
             if (cameraRoutine != null) StopCoroutine(cameraRoutine);
             cameraRoutine = StartCoroutine(MoveRoutine(from, to, duration, fovFrom, fovTo));
         }
 
-        private IEnumerator MoveRoutine(Transform from, Transform to, float duration, float fovFrom, float fovTo)
+        protected IEnumerator MoveRoutine(Transform from, Transform to, float duration, float fovFrom, float fovTo)
         {
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
@@ -593,13 +593,13 @@ namespace NasconGJ.Cutscenes
         }
 
         /// <summary>Tracks a moving subject from an offset (world-space, or in the subject's heading frame).</summary>
-        private void CameraFollow(Transform target, Vector3 offset, Vector3 offsetEnd, Vector3 look, float duration, bool local, float fov)
+        protected void CameraFollow(Transform target, Vector3 offset, Vector3 offsetEnd, Vector3 look, float duration, bool local, float fov)
         {
             if (cameraRoutine != null) StopCoroutine(cameraRoutine);
             cameraRoutine = StartCoroutine(FollowRoutine(target, offset, offsetEnd, look, duration, local, fov));
         }
 
-        private IEnumerator FollowRoutine(Transform target, Vector3 offset, Vector3 offsetEnd, Vector3 look, float duration, bool local, float fov)
+        protected IEnumerator FollowRoutine(Transform target, Vector3 offset, Vector3 offsetEnd, Vector3 look, float duration, bool local, float fov)
         {
             cam.fieldOfView = fov;
             Vector3 Desired(float k)
@@ -620,13 +620,13 @@ namespace NasconGJ.Cutscenes
         }
 
         /// <summary>Hold position, keep the subject framed (the fall).</summary>
-        private void CameraTrack(Transform target, Vector3 look)
+        protected void CameraTrack(Transform target, Vector3 look)
         {
             if (cameraRoutine != null) StopCoroutine(cameraRoutine);
             cameraRoutine = StartCoroutine(TrackRoutine(target, look));
         }
 
-        private IEnumerator TrackRoutine(Transform target, Vector3 look)
+        protected IEnumerator TrackRoutine(Transform target, Vector3 look)
         {
             while (true)
             {
@@ -635,7 +635,7 @@ namespace NasconGJ.Cutscenes
             }
         }
 
-        private void LateUpdate()
+        protected void LateUpdate()
         {
             float t = Time.time;
             float hand = 0.004f + shake;
@@ -652,7 +652,7 @@ namespace NasconGJ.Cutscenes
 
         // ------------------------------------------------------------ look
 
-        private void Apply(Atmosphere a)
+        protected void Apply(Atmosphere a)
         {
             cam.backgroundColor = a.sky;
             RenderSettings.ambientLight = a.ambient;
@@ -674,7 +674,7 @@ namespace NasconGJ.Cutscenes
             }
         }
 
-        private IEnumerator Blend(Atmosphere from, Atmosphere to, float duration)
+        protected IEnumerator Blend(Atmosphere from, Atmosphere to, float duration)
         {
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
@@ -692,10 +692,10 @@ namespace NasconGJ.Cutscenes
             Apply(to);
         }
 
-        private static Coroutine Fade(float alpha, float duration) =>
+        protected static Coroutine Fade(float alpha, float duration) =>
             ScreenFader.Instance != null ? ScreenFader.Instance.FadeTo(alpha, duration) : null;
 
-        private static IEnumerator FadeAudio(AudioSource source, float to, float duration)
+        protected static IEnumerator FadeAudio(AudioSource source, float to, float duration)
         {
             if (source == null) yield break;
             float from = source.volume;
@@ -709,7 +709,7 @@ namespace NasconGJ.Cutscenes
 
         // ------------------------------------------------------------ skip / end
 
-        private void UpdateSkip()
+        protected void UpdateSkip()
         {
             if (ending) return;
             bool held = (Keyboard.current != null && (Keyboard.current.spaceKey.isPressed || Keyboard.current.enterKey.isPressed || Keyboard.current.escapeKey.isPressed)) ||
@@ -723,7 +723,7 @@ namespace NasconGJ.Cutscenes
             if (skipHeld >= holdToSkip) StartCoroutine(SkipOut());
         }
 
-        private IEnumerator SkipOut()
+        protected IEnumerator SkipOut()
         {
             if (ending) yield break;
             ending = true;
@@ -734,7 +734,7 @@ namespace NasconGJ.Cutscenes
             Finish();
         }
 
-        private void Finish()
+        protected virtual void Finish()
         {
             ending = true;
             Shader.SetGlobalFloat(PaletteReduceId, 0f);

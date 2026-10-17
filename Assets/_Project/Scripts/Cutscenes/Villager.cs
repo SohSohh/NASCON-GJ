@@ -92,7 +92,20 @@ namespace NasconGJ.Cutscenes
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 2f);
             }
 
-            if (stopped)
+            if (scripted)
+            {
+                // cutscene-driven walk to a point, then stand
+                Vector3 to = scriptTarget - transform.position;
+                to.y = 0f;
+                if (to.magnitude < 0.08f) { scripted = false; speed = 0f; }
+                else
+                {
+                    speed = Mathf.MoveTowards(speed, Mathf.Min(scriptSpeed, to.magnitude * 1.5f + 0.2f), dt * 1.5f);
+                    transform.position += to.normalized * speed * dt;
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to.normalized), dt * 4f);
+                }
+            }
+            else if (stopped)
             {
                 speed = Mathf.MoveTowards(speed, 0f, dt * 2.5f);
                 if (lookTarget != null)
@@ -230,6 +243,52 @@ namespace NasconGJ.Cutscenes
         }
 
         private bool keepStatue;
+        private bool scripted;
+        private Vector3 scriptTarget;
+        private float scriptSpeed;
+
+        /// <summary>Walk to a point (cutscene-driven), then stand there.</summary>
+        public void WalkTo(Vector3 target, float walkSpeed)
+        {
+            stopped = true;
+            lookTarget = null;
+            scripted = true;
+            scriptTarget = target;
+            scriptSpeed = walkSpeed;
+        }
+
+        /// <summary>Start already emptied: a black statue of themselves with smoke curling off.</summary>
+        public void SetShadowed()
+        {
+            if (renderers == null) return;
+            keepStatue = true;
+            stopped = true;
+            BuildSmoke();
+            if (smoke != null) { smoke.Play(); var em = smoke.emission; em.rateOverTime = 6f; }
+            Tint(1f);
+        }
+
+        /// <summary>The light reaches them: colour floods back, the smoke blows off, and they go on with their day.</summary>
+        public void Restore(float duration) => StartCoroutine(RestoreRoutine(duration));
+
+        private IEnumerator RestoreRoutine(float duration)
+        {
+            if (smoke != null) smoke.Emit(40);
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                Tint(1f - Mathf.SmoothStep(0f, 1f, t / duration));
+                yield return null;
+            }
+            foreach (var r in renderers)
+            {
+                if (r == null || r is ParticleSystemRenderer) continue;
+                for (int i = 0; i < r.sharedMaterials.Length; i++) r.SetPropertyBlock(null, i);
+            }
+            if (smoke != null) { var em = smoke.emission; em.enabled = false; }
+            keepStatue = false;
+            lookTarget = null;
+            stopped = false;
+        }
 
         private IEnumerator Drain(float duration)
         {

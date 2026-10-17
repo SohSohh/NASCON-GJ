@@ -16,6 +16,7 @@ namespace NasconGJ.Interaction
         public FlammableItem LookedAtFlammable { get; private set; }
 
         private PlayerInputReader input;
+        private FireCarrier carrier;
         private int mask;
 
         private System.Collections.IEnumerator Start()
@@ -41,6 +42,7 @@ namespace NasconGJ.Interaction
         private void Awake()
         {
             input = GetComponent<PlayerInputReader>();
+            carrier = GetComponent<FireCarrier>();
             mask = ~LayerMask.GetMask(GameLayers.Player, "Ignore Raycast", GameLayers.ShadowEnemy);
         }
 
@@ -56,7 +58,18 @@ namespace NasconGJ.Interaction
                 if (Current != null && !Current.CanInteract(gameObject)) Current = null;
             }
 
-            if (Current != null && input.InteractPressed && !DialogueUI.IsOpen)
+            // small things (a stick on a ledge) are hard to hit with a thin ray: if it found nothing usable, look a little wider
+            if (Current == null && LookedAtFlammable == null &&
+                Physics.SphereCast(view.position, 0.14f, view.forward, out RaycastHit wide, range, mask, QueryTriggerInteraction.Ignore))
+            {
+                var near = wide.collider.GetComponentInParent<IInteractable>();
+                if (near != null && near.CanInteract(gameObject)) Current = near;
+                LookedAtFlammable = wide.collider.GetComponentInParent<FlammableItem>();
+            }
+
+            // looking at an unlit item while carrying fire, F is "hold to light it" (the ring fills), not "grab it"
+            bool lightingIt = carrier != null && LookedAtFlammable != null && carrier.TransferTarget == LookedAtFlammable;
+            if (Current != null && input.InteractPressed && !DialogueUI.IsOpen && !lightingIt)
                 Current.Interact(gameObject);
         }
     }

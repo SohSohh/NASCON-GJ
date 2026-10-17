@@ -441,7 +441,7 @@ MonoBehaviour:
   gripHeight: 0.12
   gripAlign: 0.85
   wallClearance: 0.14
-  tuckedOffset: {x: 0.07, y: -0.2, z: -0.2}
+  tuckedOffset: {x: -0.07, y: -0.06, z: -0.16}
   rightGripEuler: {x: 0, y: -90, z: -90}
   rightGripOffset: {x: 0, y: -0.02, z: -0.05}
   leftCoverEuler: {x: 80, y: 0, z: 90}

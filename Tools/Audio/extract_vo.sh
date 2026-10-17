@@ -36,3 +36,13 @@ cut "POST MONOLOGUE.mp4" 7.41 12.74 VO_P02_OneSoul      "$NARR"
 cut "POST MONOLOGUE.mp4" 13.74 16.98 VO_P03_ManyWalked  "$NARR"
 cut "POST MONOLOGUE.mp4" 17.82 20.13 VO_P04_NoneWalkedOut "$NARR"
 for f in "$OUT"/*.ogg; do printf "%-32s %5.2fs\n" "$(basename "$f")" "$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")"; done
+# C02 ending: the narrator ("ren...mp4"), Yuna ("narrator 1.mp4"), the one before + the elder ("narrator 2.mp4")
+cut "ren...mp4"        2.31 8.13   VO_E_N1_FromTheTomb    "$NARR"
+cut "ren...mp4"        8.81 11.91  VO_E_N2_BroughtBack    "$NARR"
+cut "ren...mp4"        12.48 18.97 VO_E_N3_Themselves     "$NARR"
+cut "ren...mp4"        20.16 23.59 VO_E_N4_InReturn       "$NARR"
+cut "ren...mp4"        24.74 30.63 VO_E_N5_SomeoneNew     "$NARR"
+cut "ren...mp4"        31.84 37.75 VO_E_N6_OldMan         "$NARR"
+cut "narrator 1.mp4"   1.03 1.64   VO_E_Y01_Ren           "$CLEAN"
+cut "narrator 2.mp4"   0.94 4.14   VO_E_V1_EveryAge       "$NARR"
+cut "narrator 2.mp4"   5.04 8.67   VO_E_E1_OnceAgain      "$NARR"

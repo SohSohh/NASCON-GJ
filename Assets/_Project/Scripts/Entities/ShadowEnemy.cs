@@ -61,7 +61,9 @@ namespace NasconGJ.Entities
 
         [Header("Fuel Drain")]
         [Tooltip("Max burn rate multiplier added to carried flame from this enemy (+50% = 0.5).")]
-        [SerializeField] private float maxDrainMultiplier = 0.5f;
+        [SerializeField] private float maxDrainMultiplier = 3f;
+        [Tooltip("Pinned by light but this close, it still drinks the flame (at a reduced rate).")]
+        [SerializeField] private float frozenFeedDistance = 3.5f;
 
         [Header("FX & Audio")]
         [SerializeField] private ParticleSystem smoke;
@@ -624,10 +626,12 @@ namespace NasconGJ.Entities
         /// </summary>
         public float CalculateDrainMultiplier(Vector3 playerChest)
         {
-            if (Current == State.Frozen || Current == State.Dormant || Current == State.Observe) return 0f;
+            if (Current == State.Dormant || Current == State.Observe) return 0f;
 
             float dist = Vector3.Distance(Center, playerChest);
             if (dist >= drainRadius) return 0f;
+            // light stops it moving, not feeding: right up close a frozen shadow still drinks your flame
+            if (Current == State.Frozen && dist > frozenFeedDistance) return 0f;
 
             float proximity = 1f - Mathf.Clamp01((dist - fullDrainDistance) / (drainRadius - fullDrainDistance));
             float stateWeight = Current switch
@@ -635,6 +639,7 @@ namespace NasconGJ.Entities
                 State.Approach => 0.25f,
                 State.Drain => 1.0f,
                 State.Herd => 0.75f,
+                State.Frozen => 0.45f,
                 _ => 0f
             };
 

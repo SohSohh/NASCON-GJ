@@ -9,6 +9,7 @@ Shader "NASCON/StylizedLit"
 {
     Properties
     {
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull (Off = double-sided, e.g. the first-person body)", Float) = 2
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
 
@@ -167,6 +168,7 @@ Shader "NASCON/StylizedLit"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma target 3.5
@@ -375,6 +377,7 @@ Shader "NASCON/StylizedLit"
         {
             Name "DepthOnly"
             Tags { "LightMode" = "DepthOnly" }
+            Cull [_Cull]
             ZWrite On
             ColorMask R
 
@@ -413,6 +416,7 @@ Shader "NASCON/StylizedLit"
         {
             Name "DepthNormals"
             Tags { "LightMode" = "DepthNormals" }
+            Cull [_Cull]
             ZWrite On
 
             HLSLPROGRAM

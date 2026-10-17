@@ -37,10 +37,14 @@ Material:
     - _BandNoise: 0.06
     - _BandSoftness: 0.14
     - _Bands: 3
+    - _Cull: 0
     - _GritScale: 2.5
     - _GritStrength: 0.12
+    - _InteractionHighlight: 0
+    - _InteractionOutline: 0
     - _MaxLight: 1.35
     - _MidtoneStrength: 0.35
+    - _OutlineWidth: 10
     - _RimStrength: 0.3
     - _SpecSize: 0.08
     - _SpecStrength: 0
@@ -50,6 +54,7 @@ Material:
     - _CamClip: {r: 0.3, g: 0.95, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
     - _MidtoneTint: {r: 1.18, g: 0.88, b: 0.62, a: 1}
+    - _OutlineColor: {r: 4, g: 0, b: 0, a: 1}
     - _RimColor: {r: 0.31999996, g: 0.17999998, b: 0.41999996, a: 1}
     - _ShadowTint: {r: 0.26, g: 0.15, b: 0.3, a: 1}
   m_BuildTextureStacks: []

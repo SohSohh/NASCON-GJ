@@ -89,7 +89,7 @@ namespace NasconGJ.EditorTools.Generation
 
             // Painterly flames (NASCON/StylizedFlame): cream core, orange body, teal rim.
             Flame(FlameMat, soft, grit, core: new Color(3.4f, 2.8f, 2.0f), rim: new Color(0.9f, 1.6f, 1.5f), intensity: 2.6f);
-            Flame(GuideFlameMat, soft, grit, core: new Color(0.02f, 1.2f, 2.4f), rim: new Color(0.01f, 0.8f, 1.4f), intensity: 1.5f, coreThreshold: 0.5f, softness: 0.12f);
+            Flame(GuideFlameMat, soft, grit, core: new Color(3.0f, 2.95f, 2.85f), rim: new Color(1.3f, 1.35f, 1.4f), intensity: 1.5f, coreThreshold: 0.5f, softness: 0.12f);
             Particle(ShadowEyesMat, soft, new Color(8f, 3.2f, 0.8f, 1f), additive: true);
             ShadowCreature(shadow);
 
@@ -181,7 +181,7 @@ namespace NasconGJ.EditorTools.Generation
             mat.SetColor("_EdgeColor", rim);
             mat.SetFloat("_Intensity", intensity);
             bool guide = name == GuideFlameMat;
-            mat.SetColor("_BodyTint", guide ? new Color(0.01f, 0.65f, 1f) : Color.white);
+            mat.SetColor("_BodyTint", Color.white);
             mat.SetFloat("_GBCameraBypass", guide ? 1f : 0f);
             mat.SetFloat("_GBCameraStencilMask", guide ? 192f : 0f);
             mat.SetFloat("_CoreThreshold", coreThreshold);

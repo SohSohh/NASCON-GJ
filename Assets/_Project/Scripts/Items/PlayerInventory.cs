@@ -18,6 +18,8 @@ namespace NasconGJ.Items
         [SerializeField] private CarryableItem startingItemPrefab;
         [SerializeField] private bool igniteStartingItem = true;
         [SerializeField] private float dropForce = 1.5f;
+        [Tooltip("Carry one thing at a time: picking something up sets down what you hold, and if that was burning the new item catches from it.")]
+        [SerializeField] private bool singleHand = true;
 
         public event Action Changed;
 
@@ -44,13 +46,31 @@ namespace NasconGJ.Items
 
         private void Update()
         {
-            if (input.PreviousPressed) Select(0);
-            if (input.NextPressed) Select(1);
+            if (!singleHand && input.PreviousPressed) Select(0);
+            if (!singleHand && input.NextPressed) Select(1);
             if (input.DropPressed) DropActive();
         }
 
         public void PickUp(CarryableItem item)
         {
+            if (singleHand)
+            {
+                var held = slots[ActiveSlot];
+                if (held != null)
+                {
+                    // pass the flame across as you swap hands, then leave the old item where the new one was lying
+                    if (held.Flammable != null && held.Flammable.IsBurning && item.Flammable != null && !item.Flammable.IsBurning)
+                        item.Flammable.Ignite();
+                    slots[ActiveSlot] = null;
+                    held.OnDropped(item.transform.position + Vector3.up * 0.05f, item.transform.rotation, Vector3.zero);
+                    IgnorePlayer(held);
+                }
+                slots[ActiveSlot] = item;
+                item.OnPickedUp(handSocket);
+                Select(ActiveSlot);
+                return;
+            }
+
             int slot = slots[ActiveSlot] == null ? ActiveSlot : slots[1 - ActiveSlot] == null ? 1 - ActiveSlot : -1;
             if (slot < 0)
             {

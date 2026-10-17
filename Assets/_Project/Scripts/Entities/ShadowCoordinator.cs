@@ -37,7 +37,8 @@ namespace NasconGJ.Entities
 
         [Header("Drain Limits")]
         [Tooltip("Max stacked carried-flame burn rate multiplier from all enemies combined (+150% = 1.5).")]
-        [SerializeField] private float maxStackedDrain = 1.5f;
+        [SerializeField] private float maxStackedDrain = 5f;
+        private float drainLook;
 
         private Transform player;
         private PlayerInventory inventory;
@@ -104,6 +105,7 @@ namespace NasconGJ.Entities
                     activeFlame.BurnRateMultiplier = 1f;
                     activeFlame.ShadowThreatLevel = 0f;
                 }
+                if (drainLook > 0f) { drainLook = 0f; ComicLook.SetDrain(0f); }
                 return;
             }
 
@@ -126,6 +128,9 @@ namespace NasconGJ.Entities
             float clampedDrain = Mathf.Min(totalDrainMultiplier, maxStackedDrain);
             activeFlame.BurnRateMultiplier = 1f + clampedDrain;
             activeFlame.ShadowThreatLevel = maxThreat;
+            // you can see it feeding: the frame darkens and pulls in while the flame is being drunk
+            drainLook = Mathf.MoveTowards(drainLook, Mathf.Clamp01(clampedDrain / 3f) * 0.6f, Time.deltaTime * 1.5f);
+            ComicLook.SetDrain(drainLook);
 
             // Ensure other/holstered items in inventory are unaffected
             FlammableItem otherFlame = inventory.OtherFlame;

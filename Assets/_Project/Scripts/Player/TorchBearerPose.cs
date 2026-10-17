@@ -22,6 +22,29 @@ namespace NasconGJ.Player
         [SerializeField] private float palmDistance = 0.075f;
 
         private ProceduralHumanoid rig;
+        private Transform carried, leftGrip, rightGrip;
+        private float raiseBlend;
+
+        /// <summary>
+        /// Something carried in both hands (the crystal): cradled at the chest, or lifted overhead as
+        /// <see cref="Raise"/> goes 0 → 1. Null = the usual one-handed torch hold.
+        /// </summary>
+        public Transform Carried
+        {
+            get => carried;
+            set
+            {
+                carried = value;
+                if (carried == null || leftGrip != null) return;
+                leftGrip = new GameObject("LeftGrip").transform;
+                rightGrip = new GameObject("RightGrip").transform;
+                leftGrip.SetParent(transform, false);
+                rightGrip.SetParent(transform, false);
+            }
+        }
+
+        /// <summary>0 = cradled at the chest, 1 = held high above the head with both arms.</summary>
+        public float Raise { get; set; }
 
         /// <summary>Walking speed in m/s for cutscenes (the legs walk in place; the mover moves the root).</summary>
         public float Speed { get; set; }
@@ -68,7 +91,29 @@ namespace NasconGJ.Player
                 handTarget.localPosition = handBase + new Vector3(Mathf.Sin(t * 0.6f) * sway * 0.5f, Mathf.Sin(t * 1.1f) * sway, Mathf.Sin(t * 0.7f) * sway * 0.5f);
             rig.Speed = Speed;
             rig.LookTarget = lookTarget;
+            if (carried != null)
+            {
+                // both hands on it: at the chest while walking, then lifted high (the head follows it up)
+                raiseBlend = Mathf.MoveTowards(raiseBlend, Raise, Time.deltaTime * 1.6f);
+                float k = Mathf.SmoothStep(0f, 1f, raiseBlend);
+                Vector3 local = Vector3.Lerp(new Vector3(0f, 1.12f, 0.36f), new Vector3(0f, 1.9f, 0.14f), k);    // metres, on the body (raised: within arm's reach)
+                Vector3 bob = new Vector3(0f, Mathf.Sin(t * 1.3f) * 0.012f + Mathf.Sin(t * 5.5f) * 0.004f * Mathf.Min(Speed, 1f), 0f);
+                carried.position = transform.position + transform.rotation * local + bob;
+                carried.Rotate(Vector3.up, 25f * Time.deltaTime, Space.World);
+                float spread = Mathf.Lerp(0.13f, 0.11f, k);
+                Vector3 grip = carried.position - Vector3.up * 0.05f;   // hands round its middle, not under it
+                leftGrip.position = grip - transform.right * spread;
+                rightGrip.position = grip + transform.right * spread;
+                rig.RightHandTarget = rightGrip;
+                rig.LeftHandTarget = leftGrip;
+                rig.RightHandWeight = 1f;
+                rig.LeftHandWeight = 1f;
+                if (k > 0.3f && lookTarget == null) rig.LookTarget = carried;
+                rig.Apply(Time.deltaTime);
+                return;
+            }
             rig.RightHandTarget = handTarget;
+            rig.LeftHandWeight = 0f;
             holdBlend = Mathf.MoveTowards(holdBlend, holding ? 1f : 0f, Time.deltaTime * 2f);
             rig.RightHandWeight = handTarget != null ? holdBlend : 0f;
             rig.Apply(Time.deltaTime);

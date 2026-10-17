@@ -76,9 +76,26 @@ The design doc calls for a chase after the final puzzle that ends in a hallway w
 
 Fail state: the Void touches you → black, whisper, restart at the chase's start checkpoint.
 
-## C02: Ending, "The Cycle" (3D, then paper) · ~70 s
-| # | Shot | Line | Notes |
-|---|------|------|-------|
+## C02: Ending, "The Cycle" (3D) · ~85 s · BUILT
+Built from the C01b set (same town, rooftop, tomb) by `LevelBuilder.BuildEnding` (menu **NASCON → Cutscenes → Build Ending (C02)**); `EndingDirector` inherits the prologue director's camera/caption/atmosphere toolkit.
+
+**The twist:** the Void left the town's light as bait on purpose. Every age, someone comes to save the town and ends up taking the Void's place, freeing the one before. The freed one lives on as the old storyteller ("Grandpa") who tells the tale that brings the next one.
+
+| # | Shot | Line |
+|---|------|------|
+| 1 | White flash, then dawn: Ren walks out of the tomb cradling the crystal (L05's prize) in both hands | — |
+| 2 | Low hero shot: Ren lifts the crystal high with both hands; it swells with light, white burst, and a ring of light races from the tomb to the town; the sky turns to dawn | — |
+| 3 | The street: the black shadow-statues get their colour back one by one as the light reaches them; the shadows on the walls fade | — |
+| 4 | Rooftop: Yuna comes back, turns toward the hills | YUNA: "Ren?" |
+| 5 | Close on Ren's hands: ink climbs them; the crystal's light drains to dull stone | (optional: Ren gasps) |
+| 6 | Out of the dark doorway behind Ren: a black figure; in the sunlight it becomes an old man (the Void before) and walks past | THE ONE BEFORE: "Every age, one of you comes to save them." / "I was the last one who came." / "I left the dark open for you. Thank you." |
+| 7 | Ren, faceless, turns and walks back into the tomb | NARRATOR: "The light came home. The dark only changed hands." |
+| 8 | Days later: the storyteller with the children (same face as the old man); his shadow on the wall is the Void's shape | ELDER: "There was once a town that lived in the light..." |
+| 9 | HOLLOW LIGHT, credits, back to the main menu | — |
+
+VO to record (none yet, captions only): E01 Yuna "Ren?"; E02–E04 the one before (old man, tired, grateful); E05 narrator; E06 elder (same voice as the one before). Optional: Ren gasp, Yuna waking breath.
+
+---|------|------|-------|
 | 1 | White. Ren steps out of the tomb at dawn; the light is coming **from Ren's torch**, which burns white | — | 3D, tomb set from C01b |
 | 2 | A burst of energy erupts from the tomb, a ring of light racing over the hills to the town | — | reverse of the C01b shockwave (`ComicLook.SetVoid` shrinking, inverted colours) |
 | 3 | The town: shadows **peel off the walls** and step back into their bodies; colour floods back; birds | — | `Villager.Shadowify` reversed + imprints fade |

@@ -28,6 +28,10 @@ namespace NasconGJ.Player
         [Tooltip("Body sits this much lower than the eyes, so arms rise from below the frame instead of crossing it.")]
         [SerializeField] private float dropBelowEyes = 0.14f;
         [SerializeField] private Material firstPersonMaterial;
+        [Tooltip("Collapse the legs: looking down from inside the body only showed cut-off legs and shoe tops.")]
+        [SerializeField] private bool hideLegs = true;
+        [Tooltip("Pitch the (legless, headless) body with the view around the eyes, so the arms frame the same at every look angle.")]
+        [SerializeField] private bool lockArmsToView = true;
 
         [Header("Hands")]
         [Tooltip("How far past the wrist (along the forearm) the palm centre sits, in metres.")]
@@ -40,7 +44,7 @@ namespace NasconGJ.Player
         [Header("Walls")]
         [Tooltip("Pull the hand (and the torch) in toward the chest when a wall is closer than the arm reaches.")]
         [SerializeField] private float wallClearance = 0.14f;
-        [SerializeField] private Vector3 tuckedOffset = new(0.07f, -0.2f, -0.2f);
+        [SerializeField] private Vector3 tuckedOffset = new(-0.07f, -0.06f, -0.16f);
 
         // kept for prefab compatibility (were IK rotations for the Animator version)
         [SerializeField, HideInInspector] private Vector3 rightGripEuler;
@@ -51,9 +55,10 @@ namespace NasconGJ.Player
         private FireCarrier carrier;
         private PlayerInventory inventory;
         private ProceduralHumanoid rig;
-        private Transform bodyRoot, hidden, rightHand, rightForearm;
-        private float bodyBaseY, coverWeight, holdWeight, retract;
+        private Transform bodyRoot, hidden, rightHand, rightForearm, leftLeg, rightLeg;
+        private float bodyBaseY, coverWeight, holdWeight, retract, crouch, rigDrop, neckRestY;
         private Vector3 socketBase;
+        private Quaternion bodyRotBase = Quaternion.identity;
         private bool socketInit;
         private int wallMask;
 
@@ -69,6 +74,8 @@ namespace NasconGJ.Player
             rightHand = bodyAnimator.GetBoneTransform(HumanBodyBones.RightHand);
             rightForearm = bodyAnimator.GetBoneTransform(HumanBodyBones.RightLowerArm);
             hidden = bodyAnimator.GetBoneTransform(HumanBodyBones.Neck) ?? bodyAnimator.GetBoneTransform(HumanBodyBones.Head);
+            leftLeg = bodyAnimator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+            rightLeg = bodyAnimator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
             FitToEyeHeight();
 
             rig = bodyRoot.GetComponent<ProceduralHumanoid>() ?? bodyRoot.gameObject.AddComponent<ProceduralHumanoid>();
@@ -82,7 +89,12 @@ namespace NasconGJ.Player
                     for (int i = 0; i < mats.Length; i++) mats[i] = firstPersonMaterial;
                     r.sharedMaterials = mats;
                 }
-                if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = true;
+                if (r is SkinnedMeshRenderer smr)
+                {
+                    // it hugs the camera: generous fixed bounds so no view angle ever culls the arms
+                    smr.updateWhenOffscreen = false;
+                    smr.localBounds = new Bounds(Vector3.zero, Vector3.one * 8f);
+                }
             }
         }
 
@@ -93,6 +105,7 @@ namespace NasconGJ.Player
             float headY = transform.InverseTransformPoint(head.position).y;
             if (headY > 0.1f) bodyRoot.localScale *= (eyeHeight - dropBelowEyes) / headY;
             bodyRoot.localPosition = new Vector3(0f, bodyRoot.localPosition.y, 0f);
+            bodyRotBase = bodyRoot.localRotation;
             bodyBaseY = bodyRoot.localPosition.y;
             if (autoFitReach) backOffset = SolveBackOffset();
             bodyRoot.localPosition = new Vector3(0f, bodyBaseY, -backOffset);
@@ -118,11 +131,22 @@ namespace NasconGJ.Player
             if (rig == null || !rig.enabled) return;
             float dt = Time.deltaTime;
 
-            // no separate crouch pose needed: sink the whole body with the camera so the shoulders stay under the eyes
+            // crouch with the legs (knees bend, hips drop, back hunches); only whatever the pose can't cover is made up by
+            // sinking the body, so the feet stay on the floor instead of the legs disappearing through it
             if (controller != null)
             {
                 float sink = controller.CameraRoot.localPosition.y - eyeHeight;
-                bodyRoot.localPosition = new Vector3(0f, bodyBaseY + Mathf.Min(0f, sink), -backOffset);
+                crouch = Mathf.MoveTowards(crouch, controller.IsCrouching ? 1f : 0f, dt * 4f);
+                Vector3 basePos = new Vector3(0f, bodyBaseY + Mathf.Min(0f, sink + rigDrop), -backOffset);
+                if (lockArmsToView && hideLegs && view != null)
+                {
+                    // swing the body about the eyes with the look pitch: the arms stay framed exactly as when looking ahead
+                    Vector3 eye = controller.CameraRoot.localPosition;
+                    Quaternion tilt = Quaternion.Euler(CurrentPitch(), 0f, 0f);
+                    bodyRoot.localPosition = eye + tilt * (basePos - eye);
+                    bodyRoot.localRotation = tilt * bodyRotBase;
+                }
+                else bodyRoot.localPosition = basePos;
             }
 
             coverWeight = Mathf.MoveTowards(coverWeight, carrier != null && carrier.IsCovering ? 1f : 0f, dt * 6f);
@@ -130,14 +154,27 @@ namespace NasconGJ.Player
 
             RetractFromWalls(dt);
             rig.Speed = controller != null ? controller.HorizontalSpeed : 0f;
-            rig.LookPitch = view != null ? NormalizePitch(view.parent != null ? view.parent.localEulerAngles.x : view.localEulerAngles.x) : 0f;
+            rig.LookPitch = lockArmsToView && hideLegs ? 0f : CurrentPitch();
             rig.RightHandTarget = rightHandTarget;
             rig.RightHandWeight = holdWeight;
             rig.LeftHandTarget = leftHandCoverTarget;
             rig.LeftHandWeight = coverWeight;
+            rig.Crouch = crouch;
             rig.Apply(dt);
+            // how far the pose itself lowered the shoulders (used next frame to sink the body only by the rest)
+            if (hidden != null)
+            {
+                float neckY = hidden.position.y - bodyRoot.position.y;
+                if (crouch < 0.01f) neckRestY = neckY;   // standing reference, follows the live pose (breathing, slouch)
+                rigDrop = Mathf.Lerp(rigDrop, Mathf.Max(0f, neckRestY - neckY), 1f - Mathf.Exp(-dt * 12f));
+            }
 
             if (hidden != null) hidden.localScale = Vector3.one * 0.001f;
+            if (hideLegs)
+            {
+                if (leftLeg != null) leftLeg.localScale = Vector3.one * 0.001f;
+                if (rightLeg != null) rightLeg.localScale = Vector3.one * 0.001f;
+            }
             GlueItemToHand();
         }
 
@@ -149,6 +186,7 @@ namespace NasconGJ.Player
         }
 
         private static float NormalizePitch(float x) => x > 180f ? x - 360f : x;
+        private float CurrentPitch() => view != null ? NormalizePitch(view.parent != null ? view.parent.localEulerAngles.x : view.localEulerAngles.x) : 0f;
 
         /// <summary>
         /// The hold point sits ahead of the capsule, so up against a wall the arm and torch would sink into it.
@@ -161,10 +199,10 @@ namespace NasconGJ.Player
             Vector3 dir = view.TransformDirection(new Vector3(socketBase.x * 0.5f, socketBase.y * 0.3f, socketBase.z)).normalized;
             float reach = socketBase.magnitude + 0.2f; // hand plus the torch head in front of it
             float want = 0f;
-            if (Physics.SphereCast(view.position, 0.09f, dir, out var hit, reach + wallClearance, wallMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(view.position, 0.09f, dir, out var hit, reach + wallClearance, wallMask, QueryTriggerInteraction.Ignore) && hit.normal.y < 0.6f)
                 want = Mathf.Clamp01((reach + wallClearance - hit.distance) / reach);
             // also feel straight ahead, so a wall met head-on (not along the arm) tucks the hand too
-            if (Physics.SphereCast(view.position, 0.12f, view.forward, out var front, reach, wallMask, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(view.position, 0.12f, view.forward, out var front, reach, wallMask, QueryTriggerInteraction.Ignore) && front.normal.y < 0.6f)
                 want = Mathf.Max(want, Mathf.Clamp01((reach - front.distance) / reach));
             retract = Mathf.MoveTowards(retract, want, dt * (want > retract ? 6f : 2.5f)); // snap in, ease back out
             float k = Mathf.SmoothStep(0f, 1f, retract);

@@ -39,24 +39,32 @@ Shader "NASCON/GBCameraPost"
             half _Exposure;
             half _LightFalloff;
             half _MidtoneLift;
+            // Per-level softening, set as globals by LevelPostLook (all zero = the shared look, untouched).
+            // x: blend toward a filtered palette lookup, y: contrast reduction, z: palette strength reduction, w: exposure change
+            float4 _GBLevelLook;
+            float _GBLevelPixelScale;   // extra vertical resolution, as a fraction (0.25 = 25% finer pixels)
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                float height = min(_PixelHeight, _BlitTexture_TexelSize.w);
+                float height = min(_PixelHeight * (1.0 + _GBLevelPixelScale), _BlitTexture_TexelSize.w);
                 float2 grid = float2(round(height * _BlitTexture_TexelSize.z / _BlitTexture_TexelSize.w), height);
                 float2 uv = (floor(input.texcoord * grid) + 0.5) / grid;
                 half4 source = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_PointClamp, uv, 0);
                 // The supplied GBPalette shader indexes the LUT with red and green, not luminance.
                 // Convert the linear camera result to display space before indexing its legacy LUT.
-                half3 display = LinearToSRGB(saturate(source.rgb * _Exposure));
+                half3 display = LinearToSRGB(saturate(source.rgb * _Exposure * (1.0h + _GBLevelLook.w)));
                 half brightness = dot(display, half3(0.2126h, 0.7152h, 0.0722h));
                 // Lift the transition around torchlight, without lifting unlit black levels.
                 display = saturate(display + _MidtoneLift * 4.0h * display * (1.0h - display));
                 half3 palette = SAMPLE_TEXTURE2D_LOD(_Palette, sampler_PointClamp, saturate(display.rg), 0).rgb;
+                // Per-level softening: blend the hard LUT steps with a filtered lookup, and pull the extremes toward the middle.
+                half3 smoothPalette = SAMPLE_TEXTURE2D_LOD(_Palette, sampler_LinearClamp, saturate(display.rg), 0).rgb;
+                palette = lerp(palette, smoothPalette, _GBLevelLook.x);
+                palette = (palette - 0.12h) * (1.0h - _GBLevelLook.y) + 0.12h;   // pivot low: highlights soften, blacks stay dark
                 // A fixed LUT shadow colour otherwise flattens every dark surface into a green wall.
                 half falloff = lerp(0.12h, 1.0h, smoothstep(0.0h, 0.55h, brightness));
                 palette *= lerp(1.0h, falloff, _LightFalloff);
-                return half4(lerp(source.rgb, palette, _PaletteStrength), source.a);
+                return half4(lerp(source.rgb, palette, _PaletteStrength * (1.0h - _GBLevelLook.z)), source.a);
             }
             ENDHLSL
         }

@@ -111,7 +111,7 @@ namespace NasconGJ.Fire
 
         private void UpdateTransfer(FlammableItem flame, bool hasFire)
         {
-            TransferTarget = hasFire ? FindTransferTarget(flame) : null;
+            TransferTarget = hasFire ? FindTransferTarget(flame) : FindTargetFromOtherSlot(flame);
 
             if (!input.TransferHeld) transferNeedsRelease = false;
 
@@ -141,6 +141,20 @@ namespace NasconGJ.Fire
             if (other != null && !other.IsBurning) return other;
 
             return null;
+        }
+
+        /// <summary>
+        /// Holding an unlit item: light it from the lit one in the other slot, or from any burning flame you look at
+        /// (otherwise picking up the stick before lighting it leaves no way to light it).
+        /// </summary>
+        private FlammableItem FindTargetFromOtherSlot(FlammableItem active)
+        {
+            if (active == null || active.IsBurning) return null;
+            var other = inventory.OtherFlame;
+            if (other != null && other.IsBurning) return active;
+            // or catch it from any burning flame you look at (a brazier, a torch on the floor): you can never be left in the dark for good
+            var looked = interactor != null ? interactor.LookedAtFlammable : null;
+            return looked != null && looked != active && looked.IsBurning ? active : null;
         }
 
         private void UpdateCoverHand(FlammableItem flame)
