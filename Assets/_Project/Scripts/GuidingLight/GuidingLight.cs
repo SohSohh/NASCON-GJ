@@ -42,6 +42,7 @@ namespace NasconGJ.Guiding
         public Vector3 Position => transform.position;
         public float Radius => glow != null ? glow.range : 0f;
         public Transform Transform => transform;
+        public bool IsCarried => false;
 
         private int stopIndex;
         private bool moving;

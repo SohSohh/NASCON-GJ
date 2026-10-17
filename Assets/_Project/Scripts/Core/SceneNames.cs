@@ -23,6 +23,10 @@ namespace NasconGJ.Core
         public const string Crystal = "L05_Crystal";
         public const string Escape = "L06_Escape";
 
+        // Maze sections
+        public const string Maze1 = "M01_SimpleMaze";
+        public const string Maze2 = "M02_ComplexMaze";
+
         /// <summary>Linear story order, used by SceneLoader.LoadNext().</summary>
         public static readonly string[] StoryOrder =
         {
@@ -31,7 +35,9 @@ namespace NasconGJ.Core
             PrologueTown,
             TombEntrance,
             NarrowPath,
+            Maze1,
             MultiStory,
+            Maze2,
             DummyShadows,
             Crystal,
             Escape,

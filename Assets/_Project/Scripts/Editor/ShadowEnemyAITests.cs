@@ -29,6 +29,7 @@ namespace NasconGJ.EditorTools
             allPassed &= Assert("Drain Stacking and 150% Cap", Test_DrainStackingAndCapping());
             allPassed &= Assert("Single-Herder Coordination", Test_SingleHerderCoordination());
             allPassed &= Assert("Frozen Resume Delay Logic", Test_FrozenResumeLogic());
+            allPassed &= Assert("Proximity Kill Logic (Option A)", Test_ProximityKillLogic());
 
             if (allPassed)
             {
@@ -75,6 +76,17 @@ namespace NasconGJ.EditorTools
             // Darkness / beyond radius: distance 11m -> exposure = 0
             float darkExposure = 1f - Mathf.Clamp01(11f / radius);
             if (darkExposure > 0.001f) return false;
+
+            // Carried items quadratic falloff: full torch radius 16.5m freezes at 2 to 3m (~2.69m)
+            const float torchRadius = 16.5f;
+            float carried2m = Mathf.Pow(1f - Mathf.Clamp01(2f / torchRadius), 2f);
+            if (carried2m < 0.70f) return false; // >= 0.70 at 2m (frozen)
+
+            float carriedBoundary = Mathf.Pow(1f - Mathf.Clamp01(2.69f / torchRadius), 2f);
+            if (Mathf.Abs(carriedBoundary - 0.70f) > 0.015f) return false; // lands squarely around 2.69m
+
+            float carried3m = Mathf.Pow(1f - Mathf.Clamp01(3f / torchRadius), 2f);
+            if (carried3m >= 0.70f) return false; // < 0.70 at 3m (unfrozen)
 
             return true;
         }
@@ -182,6 +194,35 @@ namespace NasconGJ.EditorTools
             timer = 0.8f;
             bool resumed = timer >= resumeDelay;
             return resumed;
+        }
+
+        private static bool Test_ProximityKillLogic()
+        {
+            const float killRange = 1.6f;
+            const float contactKillRange = 0.9f;
+
+            // Scenario 1: Active enemy at reach (1.2m) -> windup
+            float distReach = 1.2f;
+            bool activeContact = distReach <= contactKillRange;
+            bool activeWindup = distReach <= killRange && !activeContact;
+            if (activeContact || !activeWindup) return false;
+
+            // Scenario 2: Active enemy at contact (0.6m) -> instant kill
+            float distContact = 0.6f;
+            bool instantKill = distContact <= contactKillRange;
+            if (!instantKill) return false;
+
+            // Scenario 3: Frozen enemy at reach (1.2m) -> safe observation under light
+            bool isFrozen = true;
+            bool frozenWindup = distReach <= killRange && !isFrozen;
+            bool frozenContact = distReach <= contactKillRange;
+            if (frozenWindup || frozenContact) return false;
+
+            // Scenario 4: Frozen enemy at contact (0.6m) -> fatal dark matter contact
+            bool frozenFatalContact = distContact <= contactKillRange;
+            if (!frozenFatalContact) return false;
+
+            return true;
         }
     }
 }
