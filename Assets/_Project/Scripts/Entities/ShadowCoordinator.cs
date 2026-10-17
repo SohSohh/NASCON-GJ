@@ -10,7 +10,7 @@ namespace NasconGJ.Entities
     /// <summary>
     /// Coordinates all active shadow enemies in the scene.
     /// Manages aggregate fuel drain on the player's active carried flame (capped at +150%),
-    /// enforces single-herder arbitration, and distributes tactical POI targets.
+    /// while each shadow independently pursues the player.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public class ShadowCoordinator : MonoBehaviour
@@ -41,12 +41,11 @@ namespace NasconGJ.Entities
         [SerializeField] private float maxStackedDrain = 1.5f;
 
         // Change this value to tune how fast the held flame burns inside a Shadow's effect range.
-        public const float TorchBurnRateInShadowRange = 4f;
+        public const float TorchBurnRateInShadowRange = 5f;
 
         private Transform player;
         private PlayerInventory inventory;
         private PlayerDeath death;
-        private ShadowEnemy currentHerder;
 
         public static void Register(ShadowEnemy enemy)
         {
@@ -57,8 +56,6 @@ namespace NasconGJ.Entities
         public static void Unregister(ShadowEnemy enemy)
         {
             enemies.Remove(enemy);
-            if (instance != null && instance.currentHerder == enemy)
-                instance.currentHerder = null;
         }
 
         private void Awake()
@@ -93,7 +90,6 @@ namespace NasconGJ.Entities
             bool playerDead = death != null && death.IsDead;
 
             UpdateDrain(chest, playerDead);
-            UpdateHerder(chest, playerDead);
         }
 
         private void UpdateDrain(Vector3 chest, bool playerDead)
@@ -142,72 +138,6 @@ namespace NasconGJ.Entities
             {
                 otherFlame.BurnRateMultiplier = 1f;
                 otherFlame.ShadowThreatLevel = 0f;
-            }
-        }
-
-        private void UpdateHerder(Vector3 chest, bool playerDead)
-        {
-            if (playerDead)
-            {
-                currentHerder = null;
-                for (int i = 0; i < enemies.Count; i++)
-                {
-                    if (enemies[i] != null) enemies[i].SetHerderRole(false, null);
-                }
-                return;
-            }
-
-            HerdTarget primaryTarget = HerdTarget.FindPrimaryTarget(player.position);
-
-            // Check if current herder is still eligible
-            if (currentHerder != null)
-            {
-                if (!currentHerder.isActiveAndEnabled ||
-                    currentHerder.IsFrozen ||
-                    currentHerder.Current == ShadowEnemy.State.Dormant ||
-                    Vector3.Distance(currentHerder.SurfacePoint, chest) > 20f ||
-                    primaryTarget == null)
-                {
-                    currentHerder = null;
-                }
-            }
-
-            // If no herder, arbitrate among eligible candidates
-            if (currentHerder == null && primaryTarget != null)
-            {
-                float bestScore = float.NegativeInfinity;
-                Vector3 toPoi = Vector3.ProjectOnPlane(primaryTarget.Position - player.position, Vector3.up).normalized;
-
-                for (int i = 0; i < enemies.Count; i++)
-                {
-                    var enemy = enemies[i];
-                    if (enemy == null || !enemy.isActiveAndEnabled || enemy.IsFrozen) continue;
-                    if (enemy.Current == ShadowEnemy.State.Dormant) continue;
-
-                    Vector3 toEnemy = Vector3.ProjectOnPlane(enemy.SurfacePoint - player.position, Vector3.up);
-                    float dist = toEnemy.magnitude;
-                    if (dist > 14f || dist < 1e-3f) continue;
-
-                    toEnemy.Normalize();
-                    // Prefer enemies already somewhat positioned toward the POI
-                    float alignment = Vector3.Dot(toEnemy, toPoi);
-                    float score = alignment * 10f - dist;
-
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        currentHerder = enemy;
-                    }
-                }
-            }
-
-            // Assign role to all enemies
-            for (int i = 0; i < enemies.Count; i++)
-            {
-                var enemy = enemies[i];
-                if (enemy == null) continue;
-                bool isHerder = (enemy == currentHerder);
-                enemy.SetHerderRole(isHerder, isHerder ? primaryTarget : null);
             }
         }
 

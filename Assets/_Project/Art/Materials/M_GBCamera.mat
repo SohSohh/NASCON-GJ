@@ -29,11 +29,11 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Exposure: 1
-    - _LightFalloff: 0.8
+    - _Exposure: 1.09
+    - _LightFalloff: 0.856
     - _MidtoneLift: 0.08
     - _PaletteStrength: 1
-    - _PixelHeight: 288
+    - _PixelHeight: 576
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
