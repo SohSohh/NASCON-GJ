@@ -467,15 +467,6 @@ namespace NasconGJ.Entities
             if (IsFrozen || death == null || death.IsDead) return;
             Enter(State.Lunge);
             death.Kill("Taken by a shadow.");
-            var cam = Camera.main;
-            if (skin != null) skin.Renderer.enabled = false;
-            if (body != null) body.SetHidden(true);
-            if (lungeClip != null && cam != null && IsWithinShadowEffectRange)
-                AudioSource.PlayClipAtPoint(lungeClip, cam.transform.position, 1f);
-            if (cam != null && skin != null)
-                ShadowLunge.Play(skin.Renderer.sharedMaterial, ShadowSheet.CreatureFrame(ShadowSheet.Attack + 1), cam.transform,
-                    null);
-
         }
 
         // ------------------------------------------------------------ presentation
