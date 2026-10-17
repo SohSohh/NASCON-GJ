@@ -54,6 +54,14 @@ namespace NasconGJ.UI
 
         private void Start()
         {
+            if (promptText != null)
+            {
+                promptText.outlineWidth = 0.35f;
+                var promptMaterial = promptText.fontMaterial;
+                promptMaterial.SetColor("_OutlineColor", Color.black);
+                promptMaterial.SetFloat("_OutlineWidth", 0.35f);
+            }
+
             inventory = FindAnyObjectByType<PlayerInventory>();
             if (inventory == null) return;
             interactor = inventory.GetComponent<PlayerInteractor>();
@@ -83,9 +91,9 @@ namespace NasconGJ.UI
             if (!DialogueUI.IsOpen && (death == null || !death.IsDead))
             {
                 if (carrier.TransferTarget != null)
-                    prompt = $"<color=#FFB462><b>F</b></color>  <alpha=#AA>hold<alpha=#FF>  pass the flame to the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}";
+                    prompt = $"<mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark>  <color=#FFF4E8><b>Hold</b></color>  pass the flame to the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}";
                 if (interactor.Current != null)
-                    prompt = (prompt.Length > 0 ? prompt + "\n" : "") + $"<color=#FFB462><b>E</b></color>  {interactor.Current.Prompt.ToLowerInvariant()}";
+                    prompt = (prompt.Length > 0 ? prompt + "\n" : "") + $"<mark=#130A06E8><color=#FFD084><b>[E]</b></color></mark>  <color=#FFF4E8>{interactor.Current.Prompt.ToLowerInvariant()}</color>";
             }
             promptText.text = prompt;
         }

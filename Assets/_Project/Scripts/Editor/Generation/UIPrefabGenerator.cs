@@ -54,17 +54,18 @@ namespace NasconGJ.EditorTools.Generation
             uiAudio.spatialBlend = 0f;
 
             // crosshair + transfer ring
-            var cross = MakeRect("Crosshair", root, Center, Center, Vector2.zero, new Vector2(7, 7));
-            MakeImage(cross, new Color(1f, 0.9f, 0.8f, 0.45f), diamond);
+            var crosshairHalo = MakeRect("CrosshairHalo", root, Center, Center, Vector2.zero, new Vector2(24, 24));
+            MakeImage(crosshairHalo, new Color(0.01f, 0.008f, 0.006f, 0.9f), diamond);
+            var cross = MakeRect("Crosshair", root, Center, Center, Vector2.zero, new Vector2(14, 14));
+            MakeImage(cross, new Color(1f, 0.78f, 0.42f, 1f), diamond);
             var ringImg = MakeImage(MakeRect("TransferRing", root, Center, Center, Vector2.zero, new Vector2(48, 48)), Ember, ring);
             ringImg.type = Image.Type.Filled;
             ringImg.fillMethod = Image.FillMethod.Radial360;
             ringImg.fillOrigin = (int)Image.Origin360.Top;
             ringImg.fillAmount = 0f;
 
-            var prompt = MakeText(MakeRect("Prompt", root, Center, Center, new Vector2(0, -84), new Vector2(1100, 100)), "", body, 31, Warm, TextAlignmentOptions.Top);
-            prompt.outlineWidth = 0.18f;
-            prompt.outlineColor = new Color32(0, 0, 0, 200);
+            var prompt = MakeText(MakeRect("Prompt", root, Center, Center, new Vector2(0, -90), new Vector2(1250, 120)), "", body, 36, Warm, TextAlignmentOptions.Top);
+            prompt.fontStyle = FontStyles.Bold;
 
             // fuel meter (bottom-left)
             var fuelRoot = MakeRect("FuelMeter", root, Vector2.zero, Vector2.zero, new Vector2(72, 64), new Vector2(260, 40));
@@ -103,8 +104,6 @@ namespace NasconGJ.EditorTools.Generation
             var objText = MakeText(MakeRect("Text", objRoot, new Vector2(0, 0), new Vector2(1, 1), new Vector2(18, 0), new Vector2(-36, 0)), "",
                 body, 36, new Color(1f, 0.92f, 0.8f, 1f), TextAlignmentOptions.MidlineLeft);
             objText.fontStyle = FontStyles.Bold;
-            objText.outlineWidth = 0.22f;
-            objText.outlineColor = new Color32(0, 0, 0, 210);
 
             // contextual key hint card
             var hint = BuildHintCard(root);
@@ -145,6 +144,9 @@ namespace NasconGJ.EditorTools.Generation
             var faderGroup = fader.gameObject.AddComponent<CanvasGroup>();
             faderGroup.blocksRaycasts = false;
             faderGroup.interactable = false;
+            crosshairHalo.SetAsLastSibling();
+            cross.SetAsLastSibling();
+            fader.SetAsLastSibling();
 
             var hud = root.gameObject.AddComponent<HUDController>();
             GenUtil.Set(hud, "promptText", prompt);
@@ -232,8 +234,6 @@ namespace NasconGJ.EditorTools.Generation
 
             var label = MakeText(MakeRect("Label", card, Center, Center, Vector2.zero, new Vector2(400, 54)), "hold to pass the flame", body, 36, new Color(1f, 0.95f, 0.88f, 1f), TextAlignmentOptions.MidlineLeft);
             label.fontStyle = FontStyles.Bold;
-            label.outlineWidth = 0.15f;
-            label.outlineColor = new Color32(0, 0, 0, 220);
             label.textWrappingMode = TextWrappingModes.NoWrap;
             return (group, card, keyText, keyCap, label);
         }
@@ -390,8 +390,7 @@ namespace NasconGJ.EditorTools.Generation
             captionTextRt.anchorMin = Vector2.zero; captionTextRt.anchorMax = Vector2.one;
             captionTextRt.offsetMin = captionTextRt.offsetMax = Vector2.zero;
             var caption = MakeText(captionTextRt, "", body, 44, new Color(1f, 0.95f, 0.86f, 1f), TextAlignmentOptions.Center);
-            caption.outlineWidth = 0.22f;
-            caption.outlineColor = new Color32(0, 0, 0, 235);
+            // outline comes from the font material now (FontLibrary.ApplyTextOutline)
 
             // title card
             var titleRt = MakeRect("Title", root, Center, Center, new Vector2(0, 20), new Vector2(1600, 180));

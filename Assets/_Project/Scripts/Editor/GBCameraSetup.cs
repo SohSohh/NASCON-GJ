@@ -51,6 +51,7 @@ namespace NasconGJ.EditorTools
                 feature.hideFlags |= HideFlags.HideInHierarchy;
                 feature.injectionPoint = FullScreenPassRendererFeature.InjectionPoint.AfterRenderingPostProcessing;
                 feature.fetchColorBuffer = true;
+                feature.bindDepthStencilAttachment = true;
                 feature.requirements = ScriptableRenderPassInput.None;
                 feature.SetActive(true);
                 feature.Create();

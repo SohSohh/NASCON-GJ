@@ -17,6 +17,17 @@ Shader "NASCON/GBCameraPost"
         Pass
         {
             Name "GBCamera"
+            Stencil
+            {
+                Ref 128
+                ReadMask 128
+                WriteMask 0
+                Comp NotEqual
+                Pass Keep
+                Fail Keep
+                ZFail Keep
+            }
+
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
