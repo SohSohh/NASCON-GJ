@@ -6,7 +6,35 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/_Project/Scenes/Core/Boot.unity
+    guid: e8fb2c2f2169e374383992818e3b02b7
+  - enabled: 1
+    path: Assets/_Project/Scenes/Core/MainMenu.unity
+    guid: c2c8714d31d7f2345a8356856238aca9
+  - enabled: 1
+    path: Assets/_Project/Scenes/Cutscenes/C01_Prologue.unity
+    guid: d58b26754322fc1448769154d6d7269a
+  - enabled: 1
+    path: Assets/_Project/Scenes/Levels/L01_TombEntrance.unity
+    guid: 28ae8c047f9d54c41b9ce06c911ee3f7
+  - enabled: 1
+    path: Assets/_Project/Scenes/Levels/L02_NarrowPath.unity
+    guid: cc4c814c1a7e9e249893383c932756b8
+  - enabled: 1
+    path: Assets/_Project/Scenes/Levels/L03_MultiStory.unity
+    guid: 859063382128a1248853c4f68f4daae8
+  - enabled: 1
+    path: Assets/_Project/Scenes/Levels/L04_DummyShadows.unity
+    guid: c39aea534381e6047bbcd0bdce10d884
+  - enabled: 1
+    path: Assets/_Project/Scenes/Levels/L05_Crystal.unity
+    guid: a2ef5e7fe2f3c494f9ecf790bcdc4bc6
+  - enabled: 1
+    path: Assets/_Project/Scenes/Levels/L06_Escape.unity
+    guid: d5aec987f9cbc954e9531d5b1946cb67
+  - enabled: 1
+    path: Assets/_Project/Scenes/Cutscenes/C02_Ending.unity
+    guid: 858c49073e7001b459492206736d943d
   m_configObjects:
+    com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

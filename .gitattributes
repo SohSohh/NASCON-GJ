@@ -169,3 +169,8 @@ Packages/packages-lock.json linguist-generated
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+
+# Added for this project (Meshy exports, design docs)
+*.glb                   lfs
+*.gltf                  lfs
+*.docx                  lfs
