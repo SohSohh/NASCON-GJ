@@ -84,7 +84,8 @@ namespace NasconGJ.Fire
                     // follow the item's own visibility (holstered items hide their renderers)
                     bool itemVisible = fuelRenderer == null || fuelRenderer.enabled;
                     capRenderer.enabled = itemVisible && (everLit || capBeforeLit);
-                    float flicker = 0.65f + 0.35f * Mathf.PerlinNoise(Time.time * 3f, seed);
+                    float drainBoost = item.BurnRateMultiplier > 1.05f ? Mathf.Min(item.BurnRateMultiplier - 1f, 1.5f) : 0f;
+                    float flicker = 0.65f + 0.35f * Mathf.PerlinNoise(Time.time * (3f + drainBoost * 5f), seed) + drainBoost * 0.45f;
                     capRenderer.GetPropertyBlock(block, 0); // per-material, like CarryableItem's highlight, so neither overrides the other
                     block.SetColor(EmissionId, item.IsBurning ? emberColor * flicker : Color.black);
                     capRenderer.SetPropertyBlock(block, 0);

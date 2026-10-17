@@ -53,6 +53,10 @@ namespace NasconGJ.EditorTools.Generation
             cam.nearClipPlane = 0.05f;
             cam.farClipPlane = 400f;
             camGo.AddComponent<AudioListener>();
+            var featureToggle = camGo.AddComponent<RendererFeatureToggle>();
+            GenUtil.SetArray(featureToggle, "renderers", new Object[] {
+                AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.ScriptableRendererData>("Assets/Settings/PC_Renderer.asset"),
+                AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.ScriptableRendererData>("Assets/Settings/Mobile_Renderer.asset") });
             camGo.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>().renderPostProcessing = true;
             var volumes = Sub("Volumes", lighting);
             AddVolume(volumes);

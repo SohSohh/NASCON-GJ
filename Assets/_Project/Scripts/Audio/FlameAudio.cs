@@ -40,7 +40,8 @@ namespace NasconGJ.Audio
         private void Update()
         {
             if (flame == null) return;
-            float target = flame.IsLit ? volume * (flame.IsCovered ? 0.25f : 1f) * Mathf.Lerp(0.5f, 1f, flame.NormalizedFuel) * (1f + flame.Gust * 0.6f) : 0f;
+            float shadowDamping = Mathf.Lerp(1f, 0.65f, flame.ShadowThreatLevel);
+            float target = flame.IsLit ? volume * (flame.IsCovered ? 0.25f : 1f) * Mathf.Lerp(0.5f, 1f, flame.NormalizedFuel) * (1f + flame.Gust * 0.6f) * shadowDamping : 0f;
             source.volume = Mathf.MoveTowards(source.volume, target, Time.deltaTime * 2f);
             if (source.volume > 0.001f && !source.isPlaying) source.Play();
             else if (source.volume <= 0.001f && source.isPlaying) source.Pause();

@@ -56,6 +56,10 @@ namespace NasconGJ.EditorTools.Generation
             camGo.AddComponent<AudioListener>();
             camGo.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>().renderPostProcessing = true;
             camGo.AddComponent<ScrollLook>();
+            var featureToggle = camGo.AddComponent<RendererFeatureToggle>();
+            GenUtil.SetArray(featureToggle, "renderers", new Object[] {
+                AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.ScriptableRendererData>("Assets/Settings/PC_Renderer.asset"),
+                AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.ScriptableRendererData>("Assets/Settings/Mobile_Renderer.asset") });
             var vol = new GameObject("Volume_Scroll").AddComponent<Volume>();
             vol.transform.SetParent(systems, false);
             vol.isGlobal = true;

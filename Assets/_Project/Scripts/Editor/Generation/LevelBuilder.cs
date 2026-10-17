@@ -42,9 +42,7 @@ namespace NasconGJ.EditorTools.Generation
             BuildMainMenu();
             BuildPrologue();
             BuildPrologueTown();
-            BuildL01();
-            BuildPlaceholderLevel(SceneNames.NarrowPath, "L02 — Narrow Path", "Shadow on the left, exit on the right.\nPlace a lit item to hold it back.");
-            BuildPlaceholderLevel(SceneNames.MultiStory, "L03 — Multi Story", "Free the shadow so it climbs upward,\nthen drop down and escape.");
+            // L01-L03 are hand-edited by the team now: never regenerate them here (BuildL01 is still callable on its own)
             BuildPlaceholderLevel(SceneNames.DummyShadows, "L04 — Dummy Shadows", "Many props cast shadows. One of them is alive.\nFind it and block it.");
             BuildPlaceholderLevel(SceneNames.Crystal, "L05 — Crystal", "Put out every torch around the crystal,\nand your own flame, to take it.");
             BuildPlaceholderLevel(SceneNames.Escape, "L06 — Escape", "Chase sequence toward the bright light.");

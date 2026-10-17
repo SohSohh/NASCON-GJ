@@ -31,7 +31,6 @@ namespace NasconGJ.Guiding
         [SerializeField] private Transform visual;
         [SerializeField] private float bobAmplitude = 0.12f;
         [SerializeField] private float bobSpeed = 1.4f;
-        [SerializeField] private float gameplayRadiusFactor = 0.5f;
 
         public string Prompt => "Listen";
         public bool IsTalking { get; private set; }
@@ -41,7 +40,7 @@ namespace NasconGJ.Guiding
         // ILightSource
         public bool IsLit => glow != null && glow.enabled;
         public Vector3 Position => transform.position;
-        public float Radius => glow != null ? glow.range * gameplayRadiusFactor : 0f;
+        public float Radius => glow != null ? glow.range : 0f;
         public Transform Transform => transform;
 
         private int stopIndex;

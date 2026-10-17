@@ -70,7 +70,7 @@ namespace NasconGJ.EditorTools.Generation
             torchFuel.Prism(MatId.Wood, 6, Vector3.zero, 0.022f, 0.14f);
             torchFuel.Prism(MatId.Cloth, 8, new Vector3(0, 0.015f, 0), 0.042f, 0.125f, new Vector3(0, 10f, 0));
             MakeItem(Torch, "Torch", torch, torchFuel, fuelBaseY: 0.31f, fuelLength: 0.14f, capRadius: 0.036f, capBeforeLit: true,
-                flameScale: 1f, burnTime: 90f, range: 11f, intensity: 12f,
+                flameScale: 1f, burnTime: 90f, range: 16.5f, intensity: 18f,     // team balance (was 11 / 12)
                 size: new Vector3(0.09f, 0.48f, 0.09f), holdPos: new Vector3(0, -0.12f, 0), holdRot: Vector3.zero);
 
             // stick: a pale dry branch with a twig; the top two thirds burn away
@@ -80,7 +80,7 @@ namespace NasconGJ.EditorTools.Generation
             var stickFuel = new MeshBuilder(212);
             stickFuel.Prism(MatId.WoodLight, 5, Vector3.zero, 0.016f, 0.2f, new Vector3(0, 0, 2f));
             MakeItem(Stick, "Stick", stick, stickFuel, fuelBaseY: 0.13f, fuelLength: 0.2f, capRadius: 0.02f, capBeforeLit: false,
-                flameScale: 0.7f, burnTime: 35f, range: 8f, intensity: 8f,
+                flameScale: 0.7f, burnTime: 35f, range: 12f, intensity: 12f,     // team balance (was 8 / 8)
                 size: new Vector3(0.07f, 0.36f, 0.07f), holdPos: new Vector3(0, -0.08f, 0), holdRot: Vector3.zero);
 
             // candle: brass dish; the wax melts down
@@ -90,7 +90,7 @@ namespace NasconGJ.EditorTools.Generation
             var candleFuel = new MeshBuilder(213);
             candleFuel.Prism(MatId.Wax, 8, Vector3.zero, 0.03f, 0.13f);
             MakeItem(Candle, "Candle", candle, candleFuel, fuelBaseY: 0.016f, fuelLength: 0.13f, capRadius: 0.004f, capBeforeLit: true,
-                flameScale: 0.45f, burnTime: 60f, range: 6f, intensity: 5f,
+                flameScale: 0.45f, burnTime: 60f, range: 9f, intensity: 7.5f,    // team balance (was 6 / 5)
                 size: new Vector3(0.15f, 0.16f, 0.15f), holdPos: new Vector3(0, 0.02f, 0), holdRot: Vector3.zero, capHeight: 0.02f);
         }
 
@@ -244,7 +244,6 @@ namespace NasconGJ.EditorTools.Generation
                 GenUtil.Set(f, "startLit", lit);
                 GenUtil.Set(f, "countsAsPlayerFire", false);
                 GenUtil.Set(f, "flameLight", light);
-                GenUtil.Set(f, "gameplayRadiusFactor", 0.65f);
                 GenUtil.SetArray(f, "flameParticles", particles);
 
                 GenUtil.SetLayerRecursive(go, LayerMask.NameToLayer(GameLayers.LightBlocker));

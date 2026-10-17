@@ -24,6 +24,8 @@ namespace NasconGJ.Puzzles
         {
             GetComponent<Collider>().isTrigger = true;
             unlocked = string.IsNullOrEmpty(requiredPuzzleId);
+            if (GetComponent<Entities.HerdTarget>() == null)
+                gameObject.AddComponent<Entities.HerdTarget>();
         }
 
         private void OnPuzzleSolved(string id)

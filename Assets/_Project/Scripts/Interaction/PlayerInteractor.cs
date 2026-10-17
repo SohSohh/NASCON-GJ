@@ -18,6 +18,26 @@ namespace NasconGJ.Interaction
         private PlayerInputReader input;
         private int mask;
 
+        private System.Collections.IEnumerator Start()
+        {
+            // Also covers scene-local objects and items spawned after the level has loaded.
+            var interval = new WaitForSeconds(1f);
+            while (true)
+            {
+                foreach (var behaviour in FindObjectsByType<MonoBehaviour>())
+                {
+                    if (behaviour is not IInteractable && behaviour is not FlammableItem) continue;
+                    if (behaviour.TryGetComponent<InteractableHighlight>(out var existing))
+                    {
+                        existing.SetPlayer(this);
+                        continue;
+                    }
+                    behaviour.gameObject.AddComponent<InteractableHighlight>().Initialize(this);
+                }
+                yield return interval;
+            }
+        }
+
         private void Awake()
         {
             input = GetComponent<PlayerInputReader>();

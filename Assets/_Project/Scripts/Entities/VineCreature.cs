@@ -34,6 +34,8 @@ namespace NasconGJ.Entities
         public float Float;
         [Tooltip("How often and how hard the head jerks.")]
         public float Twitch = 0.6f;
+        /// <summary>0 = frozen rigid (light-locked), 1 = normal.</summary>
+        public float TimeScale = 1f;
         public Vector3 ReachTarget = new(0f, 1.4f, 2f);
 
         public float Height => height;
@@ -152,7 +154,7 @@ namespace NasconGJ.Entities
         private void LateUpdate()
         {
             if (!built) return;
-            Solve(Time.deltaTime);
+            Solve(Time.deltaTime * TimeScale);
         }
 
         private void Solve(float dt)
