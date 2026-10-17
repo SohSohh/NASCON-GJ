@@ -38,7 +38,7 @@ namespace NasconGJ.Core
             Maze1,
             MultiStory,
             Maze2,
-            DummyShadows,
+            // DummyShadows, Skill issue hmse nhi bna
             Crystal,
             Escape,
             Ending,
