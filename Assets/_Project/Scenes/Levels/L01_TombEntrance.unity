@@ -14631,6 +14631,7 @@ MonoBehaviour:
   facePitch: 38
   controlsHintKeys: 
   controlsHintText: 
+  wakeClip: {fileID: 8300000, guid: e5718251e285ee34e9eae478936899f5, type: 3}
 --- !u!1001 &1506718513
 PrefabInstance:
   m_ObjectHideFlags: 0
