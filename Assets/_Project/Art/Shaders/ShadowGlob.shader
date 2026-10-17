@@ -13,6 +13,7 @@ Shader "NASCON/ShadowGlob"
         _WobbleSpeed("Wobble Speed", Float) = 1.4
         _Dissolve("Dissolve", Range(0, 1)) = 0
         _NoiseTex("Noise", 2D) = "gray" {}
+        _FogAmount("Fog Amount", Range(0, 1)) = 1
     }
 
     SubShader
@@ -32,6 +33,7 @@ Shader "NASCON/ShadowGlob"
             float _WobbleSpeed;
             half _Dissolve;
             float4 _NoiseTex_ST;
+            half _FogAmount;
         CBUFFER_END
         TEXTURE2D(_NoiseTex); SAMPLER(sampler_NoiseTex);
 
@@ -100,7 +102,7 @@ Shader "NASCON/ShadowGlob"
                           + _InnerColor.rgb * pow(ndv, 3.0h) * 0.5h
                           + _RimColor.rgb * rim * _Glow * flicker
                           + _RimColor.rgb * burn * 3.0h;
-                col = MixFog(col, input.fog);
+                col = lerp(col, MixFog(col, input.fog), _FogAmount);
                 return half4(col, 1);
             }
             ENDHLSL

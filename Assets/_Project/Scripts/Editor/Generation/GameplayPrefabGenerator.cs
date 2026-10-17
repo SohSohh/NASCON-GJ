@@ -335,21 +335,17 @@ namespace NasconGJ.EditorTools.Generation
             whisper.maxDistance = 14f;
             whisper.volume = 0f;
 
-            // the tar body: blobs + eyes are spawned at runtime by ShadowBody; tar drips fall off it
-            var dripColors = Grad(new[] { Color.white, new Color(0.7f, 0.4f, 0.3f) }, new[] { 0f, 1f }, new[] { 0.9f, 0.9f, 0f }, new[] { 0f, 0.7f, 1f });
-            var drips = Particles(go.transform, "Drips", MaterialLibrary.Get(MaterialLibrary.ShadowSmokeMat), dripColors, rate: 4f,
-                life: new Vector2(0.7f, 1.2f), speed: new Vector2(0f, 0.05f), size: new Vector2(0.05f, 0.11f), shapeRadius: 0.3f,
-                sphere: true, gravity: 0.8f, noise: 0f, playOnAwake: true);
-            var dripShape = drips.shape;
-            dripShape.shapeType = ParticleSystemShapeType.Box;
-            var sphereGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            var globMesh = sphereGo.GetComponent<MeshFilter>().sharedMesh;
-            Object.DestroyImmediate(sphereGo);
+            // the vine body is built at runtime by ShadowBody; black smoke peels off it
+            var wispColors = Grad(new[] { Color.white, new Color(0.5f, 0.3f, 0.3f) }, new[] { 0f, 1f }, new[] { 0f, 0.8f, 0f }, new[] { 0f, 0.2f, 1f });
+            var wisps = Particles(go.transform, "Wisps", MaterialLibrary.Get(MaterialLibrary.ShadowSmokeMat), wispColors, rate: 6f,
+                life: new Vector2(1.2f, 2f), speed: new Vector2(0.05f, 0.3f), size: new Vector2(0.2f, 0.5f), shapeRadius: 0.3f,
+                sphere: true, gravity: -0.05f, noise: 0.4f, playOnAwake: true);
+            var wispShape = wisps.shape;
+            wispShape.shapeType = ParticleSystemShapeType.Box;
             var body = go.AddComponent<ShadowBody>();
-            GenUtil.Set(body, "globMesh", globMesh);
-            GenUtil.Set(body, "globMaterial", MaterialLibrary.Get(MaterialLibrary.ShadowGlobMat));
-            GenUtil.Set(body, "eyeMaterial", MaterialLibrary.Get(MaterialLibrary.ShadowGlobEyesMat));
-            GenUtil.Set(body, "drips", drips);
+            GenUtil.Set(body, "vineMaterial", MaterialLibrary.Get(MaterialLibrary.ShadowVineMat));
+            GenUtil.Set(body, "heartMaterial", MaterialLibrary.Get(MaterialLibrary.ShadowHeartMat));
+            GenUtil.Set(body, "wisps", wisps);
 
             var enemy = go.AddComponent<ShadowEnemy>();
             GenUtil.Set(enemy, "body", body);
@@ -514,7 +510,7 @@ namespace NasconGJ.EditorTools.Generation
 
             var heartGo = GenUtil.Child("Heartbeat", go.transform);
             var heartbeat = heartGo.AddComponent<AudioSource>();
-            heartbeat.clip = AudioGenerator.Load("SFX_Heartbeat");
+            heartbeat.clip = AudioGenerator.Real("SFX_Heartbeat.wav", "SFX_Heartbeat");
             heartbeat.loop = true;
             heartbeat.playOnAwake = false;
             heartbeat.spatialBlend = 0f;
@@ -525,8 +521,9 @@ namespace NasconGJ.EditorTools.Generation
             var fpc = go.AddComponent<FirstPersonController>();
             GenUtil.Set(fpc, "cameraRoot", cameraRoot.transform);
             GenUtil.Set(fpc, "footstepSource", footsteps);
-            var steps = new Object[4];
-            for (int i = 0; i < 4; i++) steps[i] = AudioGenerator.Load($"SFX_Step_{i + 1}");
+            string[] stepFiles = { "SFX_Step_0.ogg", "SFX_Step_3.ogg", "SFX_Step_6.ogg" };
+            var steps = new Object[stepFiles.Length];
+            for (int i = 0; i < steps.Length; i++) steps[i] = AudioGenerator.Real(stepFiles[i], $"SFX_Step_{i + 1}");
             GenUtil.SetArray(fpc, "footstepClips", steps);
 
             var interactor = go.AddComponent<PlayerInteractor>();
@@ -597,7 +594,7 @@ namespace NasconGJ.EditorTools.Generation
 
             var audioGo = GenUtil.Child("Crackle", root.transform);
             var source = audioGo.AddComponent<AudioSource>();
-            source.clip = AudioGenerator.Load("SFX_FireCrackle");
+            source.clip = AudioGenerator.Real("AMB_Fireplace.wav", "SFX_FireCrackle");
             source.loop = true;
             source.playOnAwake = false;
             source.spatialBlend = 1f;
@@ -606,7 +603,7 @@ namespace NasconGJ.EditorTools.Generation
             source.maxDistance = 9f + scale * 2f;
             var flameAudio = audioGo.AddComponent<NasconGJ.Audio.FlameAudio>();
             GenUtil.Set(flameAudio, "volume", Mathf.Clamp(0.35f + scale * 0.15f, 0.35f, 0.75f));
-            GenUtil.Set(flameAudio, "igniteClip", AudioGenerator.Load("SFX_Ignite"));
+            GenUtil.Set(flameAudio, "igniteClip", AudioGenerator.Real("SFX_FireCrackleShort.wav", "SFX_Ignite"));
 
             light.enabled = startPlaying;
             return (light, new[] { flame, embers });

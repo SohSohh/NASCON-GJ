@@ -27,6 +27,7 @@ namespace NasconGJ.EditorTools.Generation
         PaintBlue,
         PaintYellow,
         PaintGreen,
+        Grass,
     }
 
     /// <summary>
@@ -40,10 +41,16 @@ namespace NasconGJ.EditorTools.Generation
         public const string ShadowMat = "M_ShadowCreature";
         public const string ShadowGlobMat = "M_ShadowGlob";
         public const string VoidSkyMat = "M_VoidSky";
+        public const string ShadowVineMat = "M_ShadowVine";
+        public const string LightningMat = "M_Lightning";
+        public const string SkyDomeMat = "M_SkyDome";
+        public const string VoidVineMat = "M_VoidVine";
+        public const string ShadowHeartMat = "M_ShadowHeart";
         public const string ShadowGlobEyesMat = "M_ShadowGlobEyes";
         public const string ShadowEyesMat = "M_ShadowEyes";
         public const string VolumeProfilePath = GenUtil.VolumeDir + "/VP_Tomb.asset";
         public const string OutdoorProfilePath = GenUtil.VolumeDir + "/VP_Outdoor.asset";
+        public const string ScrollProfilePath = GenUtil.VolumeDir + "/VP_Scroll.asset";
 
         private static readonly Dictionary<MatId, Material> cache = new();
 
@@ -76,6 +83,9 @@ namespace NasconGJ.EditorTools.Generation
             Stylized(MatId.PaintBlue, Hex("3E78A8"), grit, gritStrength: 0.25f);
             Stylized(MatId.PaintYellow, Hex("E2B44A"), grit, gritStrength: 0.25f);
             Stylized(MatId.PaintGreen, Hex("5F9150"), grit, gritStrength: 0.25f);
+            // prologue grass
+            Stylized(MatId.Grass, Hex("7CC95A"), grit, gritStrength: 0.12f);
+
 
             // Painterly flames (NASCON/StylizedFlame): cream core, orange body, teal rim.
             Flame(FlameMat, soft, grit, core: new Color(3.4f, 2.8f, 2.0f), rim: new Color(0.9f, 1.6f, 1.5f), intensity: 2.6f);
@@ -85,7 +95,10 @@ namespace NasconGJ.EditorTools.Generation
 
             BuildVolumeProfile();
             BuildOutdoorProfile();
+            BuildScrollProfile();
+            BuildCinematicProfile();
             PainterlyPass(grit);
+            ComicPass(grit);
             AssetDatabase.SaveAssets();
         }
 
@@ -108,7 +121,7 @@ namespace NasconGJ.EditorTools.Generation
 
         // ---------------- material builders ----------------
 
-        private static Material LoadOrCreate(string name, string shaderName)
+        public static Material LoadOrCreate(string name, string shaderName)
         {
             string path = $"{GenUtil.MaterialDir}/{name}.mat";
             var shader = Shader.Find(shaderName);
@@ -216,6 +229,37 @@ namespace NasconGJ.EditorTools.Generation
             EditorUtility.SetDirty(data);
         }
 
+        public const string ComicMat = "M_ComicPost";
+
+        /// <summary>Ink outlines, toon colour, halftone, the Void flood and impact frames; installed after the painterly pass.</summary>
+        private static void ComicPass(Texture2D noise)
+        {
+            var mat = LoadOrCreate(ComicMat, "NASCON/ComicPost");
+            mat.SetTexture("_NoiseTex", noise);
+            EditorUtility.SetDirty(mat);
+
+            var data = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererPath);
+            if (data == null) return;
+            FullScreenPassRendererFeature feature = null;
+            foreach (var f in data.rendererFeatures)
+                if (f is FullScreenPassRendererFeature fs && f.name == "ComicPass") feature = fs;
+            if (feature == null)
+            {
+                feature = ScriptableObject.CreateInstance<FullScreenPassRendererFeature>();
+                feature.name = "ComicPass";
+                AssetDatabase.AddObjectToAsset(feature, data);
+                data.rendererFeatures.Add(feature); // after PainterlyPass, so ink lines stay crisp
+            }
+            feature.passMaterial = mat;
+            feature.injectionPoint = FullScreenPassRendererFeature.InjectionPoint.BeforeRenderingPostProcessing;
+            feature.fetchColorBuffer = true;
+            feature.requirements = ScriptableRenderPassInput.Color | ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal;
+            feature.SetActive(true);
+            data.SetDirty();
+            EditorUtility.SetDirty(feature);
+            EditorUtility.SetDirty(data);
+        }
+
         private static void MakeTransparent(Material mat, bool additive)
         {
             mat.SetFloat("_Surface", 1f);
@@ -231,7 +275,7 @@ namespace NasconGJ.EditorTools.Generation
             mat.renderQueue = (int)RenderQueue.Transparent;
         }
 
-        private static void Particle(string name, Texture2D tex, Color color, bool additive)
+        public static void Particle(string name, Texture2D tex, Color color, bool additive)
         {
             var mat = LoadOrCreate(name, "Universal Render Pipeline/Particles/Unlit");
             mat.SetTexture("_BaseMap", tex);
@@ -272,6 +316,39 @@ namespace NasconGJ.EditorTools.Generation
             voidSky.SetFloat("_Wobble", 0.006f);
             voidSky.renderQueue = (int)RenderQueue.Transparent - 10;
             EditorUtility.SetDirty(voidSky);
+
+            // the vine creatures (shadows + the Void): pitch-black writhing vines, a faint blood-red edge, a burning heart
+            var vineMat = LoadOrCreate(ShadowVineMat, "NASCON/ShadowGlob");
+            vineMat.SetTexture("_NoiseTex", grit);
+            vineMat.SetColor("_BodyColor", new Color(0.006f, 0.002f, 0.005f, 1f));
+            vineMat.SetColor("_InnerColor", new Color(0.02f, 0.004f, 0.01f, 1f));
+            vineMat.SetColor("_RimColor", new Color(0.9f, 0.08f, 0.05f, 1f));
+            vineMat.SetFloat("_RimPower", 3.5f);
+            vineMat.SetFloat("_Wobble", 0.004f);
+            vineMat.SetFloat("_WobbleSpeed", 2.2f);
+            EditorUtility.SetDirty(vineMat);
+            Particle(LightningMat, AssetDatabase.LoadAssetAtPath<Texture2D>(TextureGenerator.SoftParticlePath), new Color(0.85f, 0.8f, 1f, 1f) * 4f, additive: true);
+            // the colossal Void: pure black against the sky (no fog, only a hairline ember edge)
+            var voidVine = LoadOrCreate(VoidVineMat, "NASCON/ShadowGlob");
+            voidVine.SetTexture("_NoiseTex", grit);
+            voidVine.SetColor("_BodyColor", new Color(0.004f, 0.001f, 0.003f, 1f));
+            voidVine.SetColor("_InnerColor", new Color(0.01f, 0.002f, 0.006f, 1f));
+            voidVine.SetColor("_RimColor", new Color(0.35f, 0.03f, 0.02f, 1f));
+            voidVine.SetFloat("_RimPower", 8f);
+            voidVine.SetFloat("_Wobble", 0.002f);
+            voidVine.SetFloat("_FogAmount", 0.15f);
+            EditorUtility.SetDirty(voidVine);
+            var sky = LoadOrCreate(SkyDomeMat, "NASCON/SkyDome");
+            sky.SetTexture("_NoiseTex", grit);
+            EditorUtility.SetDirty(sky);
+            var heartMat = LoadOrCreate(ShadowHeartMat, "NASCON/ShadowGlob");
+            heartMat.SetTexture("_NoiseTex", grit);
+            heartMat.SetColor("_BodyColor", new Color(0.5f, 0.03f, 0.03f, 1f));
+            heartMat.SetColor("_InnerColor", new Color(2.2f, 0.25f, 0.1f, 1f));
+            heartMat.SetColor("_RimColor", new Color(3f, 0.5f, 0.15f, 1f));
+            heartMat.SetFloat("_RimPower", 2f);
+            heartMat.SetFloat("_Wobble", 0.08f);
+            EditorUtility.SetDirty(heartMat);
 
             // the tar body: dark wobbling blobs with an ember rim, and its burning eyes
             var globMat = LoadOrCreate(ShadowGlobMat, "NASCON/ShadowGlob");
@@ -362,6 +439,115 @@ namespace NasconGJ.EditorTools.Generation
             grain.type.Override(FilmGrainLookup.Medium3);
             grain.intensity.Override(0.28f);
 
+            EditorUtility.SetDirty(profile);
+        }
+
+        /// <summary>The painted story scroll: no filmic tonemapping (paper colours stay true), soft bloom, grain, light vignette.</summary>
+        private static void BuildScrollProfile()
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ScrollProfilePath);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                AssetDatabase.CreateAsset(profile, ScrollProfilePath);
+            }
+            T Comp<T>() where T : VolumeComponent
+            {
+                if (!profile.TryGet(out T c))
+                {
+                    c = profile.Add<T>(true);
+                    c.name = typeof(T).Name;
+                    AssetDatabase.AddObjectToAsset(c, profile);
+                }
+                c.active = true;
+                return c;
+            }
+            Comp<Tonemapping>().mode.Override(TonemappingMode.None);
+            var bloom = Comp<Bloom>();
+            bloom.threshold.Override(0.82f);
+            bloom.intensity.Override(1.35f);
+            bloom.scatter.Override(0.82f);
+            bloom.tint.Override(new Color(1f, 0.8f, 0.55f));
+            var lgg = Comp<LiftGammaGain>();
+            lgg.lift.Override(new Vector4(1f, 0.96f, 0.92f, -0.02f));   // warm, slightly lifted blacks like ink on paper
+            lgg.gain.Override(new Vector4(1f, 0.97f, 0.9f, 0.04f));
+            var split = Comp<SplitToning>();
+            split.shadows.Override(new Color(0.35f, 0.45f, 0.5f));      // teal in the shadows, gold in the lights
+            split.highlights.Override(new Color(1f, 0.8f, 0.5f));
+            split.balance.Override(-15f);
+            var dof = Comp<DepthOfField>();                             // depth: far mountains and near grass soften
+            dof.mode.Override(DepthOfFieldMode.Bokeh);
+            dof.focusDistance.Override(20f);
+            dof.aperture.Override(4.5f);
+            dof.focalLength.Override(70f);
+            var vig = Comp<Vignette>();
+            vig.intensity.Override(0.34f);
+            vig.smoothness.Override(0.6f);
+            vig.color.Override(new Color(0.08f, 0.04f, 0.03f));
+            var grain = Comp<FilmGrain>();
+            grain.type.Override(FilmGrainLookup.Medium1);
+            grain.intensity.Override(0.22f);
+            var color = Comp<ColorAdjustments>();
+            color.postExposure.Override(0f);
+            color.contrast.Override(6f);
+            color.saturation.Override(4f);
+            var ca = Comp<ChromaticAberration>();
+            ca.intensity.Override(0.08f);
+            EditorUtility.SetDirty(profile);
+        }
+
+        public const string CinematicProfilePath = GenUtil.VolumeDir + "/VP_Cinematic.asset";
+
+        /// <summary>The film grade for the 3D cutscene: soft bloom, warm split-tone, depth of field, grain, vignette.</summary>
+        public static void BuildCinematicProfile()
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(CinematicProfilePath);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                AssetDatabase.CreateAsset(profile, CinematicProfilePath);
+            }
+            T Comp<T>() where T : VolumeComponent
+            {
+                if (!profile.TryGet(out T c))
+                {
+                    c = profile.Add<T>(true);
+                    c.name = typeof(T).Name;
+                    AssetDatabase.AddObjectToAsset(c, profile);
+                }
+                c.active = true;
+                return c;
+            }
+            var bloom = Comp<Bloom>();
+            bloom.threshold.Override(0.9f);
+            bloom.intensity.Override(0.9f);
+            bloom.scatter.Override(0.72f);
+            bloom.tint.Override(new Color(1f, 0.86f, 0.7f));
+            var dof = Comp<DepthOfField>();
+            dof.mode.Override(DepthOfFieldMode.Gaussian);               // the far town melts away behind whoever's speaking
+            dof.gaussianStart.Override(14f);
+            dof.gaussianEnd.Override(60f);
+            dof.gaussianMaxRadius.Override(1.1f);
+            dof.highQualitySampling.Override(true);
+            var split = Comp<SplitToning>();
+            split.shadows.Override(new Color(0.38f, 0.42f, 0.55f));
+            split.highlights.Override(new Color(1f, 0.82f, 0.6f));
+            split.balance.Override(-10f);
+            var color = Comp<ColorAdjustments>();
+            color.contrast.Override(12f);
+            color.saturation.Override(6f);
+            var wb = Comp<WhiteBalance>();
+            wb.temperature.Override(8f);
+            var vig = Comp<Vignette>();
+            vig.intensity.Override(0.32f);
+            vig.smoothness.Override(0.55f);
+            var grain = Comp<FilmGrain>();
+            grain.type.Override(FilmGrainLookup.Medium2);
+            grain.intensity.Override(0.28f);
+            var ca = Comp<ChromaticAberration>();
+            ca.intensity.Override(0.12f);
+            var lens = Comp<LensDistortion>();
+            lens.intensity.Override(-0.12f);
             EditorUtility.SetDirty(profile);
         }
 

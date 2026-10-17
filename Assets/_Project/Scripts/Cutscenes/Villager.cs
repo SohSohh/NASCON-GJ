@@ -12,10 +12,18 @@ namespace NasconGJ.Cutscenes
     /// </summary>
     public class Villager : MonoBehaviour
     {
+        public enum Activity { Idle, Chat, Sell, HandsBehind, Carry, Sit, Story, Listen }
+
+        [Tooltip("What they're doing when the cutscene catches them (all procedural, eased in and out).")]
+        [SerializeField] private Activity activity = Activity.Idle;
+        [Tooltip("0 = upright, 1 = old and stooped.")]
+        [SerializeField, Range(0f, 1f)] private float stoop;
         [Tooltip("World offset to stroll to and back. Zero = stand and idle.")]
         [SerializeField] private Vector3 strollOffset;
         [SerializeField] private float strollSpeed = 1.05f;
         [SerializeField] private float phase;
+        [Tooltip("Someone to talk to: faces them, nods, gestures while it's their turn to speak.")]
+        [SerializeField] private Transform talkTo;
         [Tooltip("Dark smoke the body comes apart into.")]
         [SerializeField] private Material smokeMaterial;
 
@@ -25,7 +33,7 @@ namespace NasconGJ.Cutscenes
         private static readonly Color Shadow = new(0.02f, 0.008f, 0.016f, 1f);
 
         private ProceduralHumanoid rig;
-        private Transform lookTarget;
+        private Transform lookTarget, gestureHand, otherHand, partnerHead;
         private Vector3 home;
         private Quaternion baseRotation;
         private Renderer[] renderers;
@@ -44,6 +52,20 @@ namespace NasconGJ.Cutscenes
             renderers = GetComponentsInChildren<Renderer>();
             block = new MaterialPropertyBlock();
             time = phase * 10f;
+            if (rig != null)
+            {
+                gestureHand = new GameObject("GestureHand").transform;
+                gestureHand.SetParent(transform, false);
+                otherHand = new GameObject("OtherHand").transform;
+                otherHand.SetParent(transform, false);
+                rig.Stoop = stoop;
+                if (talkTo != null)
+                {
+                    partnerHead = new GameObject("PartnerHead").transform;
+                    partnerHead.SetParent(talkTo, false);
+                    partnerHead.localPosition = Vector3.up * 1.55f;
+                }
+            }
             if (strollOffset.sqrMagnitude > 0.01f)
             {
                 // start somewhere along the route so the street doesn't move in lockstep
@@ -63,6 +85,12 @@ namespace NasconGJ.Cutscenes
         {
             time += Time.deltaTime;
             float dt = Time.deltaTime;
+
+            if (!stopped && talkTo != null)
+            {
+                Vector3 to = Flat(talkTo.position - transform.position);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 2f);
+            }
 
             if (stopped)
             {
@@ -112,7 +140,70 @@ namespace NasconGJ.Cutscenes
         {
             if (rig == null || !rig.enabled) return;
             rig.Speed = speed;
-            rig.LookTarget = lookTarget;
+            rig.LookTarget = lookTarget != null ? lookTarget : partnerHead;
+
+            float weight = 0f, otherWeight = 0f;
+            float beat = Mathf.PerlinNoise(time * 1.6f, phase * 7f);
+            float slow = Mathf.PerlinNoise(time * 0.5f, phase * 3f);
+            bool afraid = lookTarget != null;
+            if (gestureHand != null && !afraid)
+            {
+                switch (activity)
+                {
+                    case Activity.Chat when talkTo != null:
+                    case Activity.Idle when talkTo != null:
+                    {
+                        // take turns: the speaker talks with their hands (sometimes both), the listener nods
+                        float turn = Mathf.Sin(time * 0.45f + phase * 3.1f);
+                        float speaking = Mathf.SmoothStep(0f, 1f, turn * 2f);
+                        gestureHand.localPosition = new Vector3(0.14f + beat * 0.08f, 0.98f + Mathf.PerlinNoise(phase * 5f, time * 1.3f) * 0.14f, 0.28f + beat * 0.07f);
+                        otherHand.localPosition = new Vector3(-0.16f - slow * 0.06f, 0.95f + slow * 0.12f, 0.26f + beat * 0.04f);
+                        weight = speaking * 0.55f;
+                        otherWeight = speaking * Mathf.SmoothStep(0f, 1f, (slow - 0.45f) * 4f) * 0.45f;
+                        break;
+                    }
+                    case Activity.Sell:
+                        // leaning over the counter, showing goods: one hand out, the other resting on the counter
+                        gestureHand.localPosition = new Vector3(0.12f, 1.0f + beat * 0.12f, 0.42f + slow * 0.08f);
+                        otherHand.localPosition = new Vector3(-0.2f, 0.92f, 0.38f);
+                        weight = 0.75f; otherWeight = 0.7f;
+                        break;
+                    case Activity.HandsBehind:
+                        gestureHand.localPosition = new Vector3(0.06f, 0.92f, -0.17f);
+                        otherHand.localPosition = new Vector3(-0.06f, 0.92f, -0.17f);
+                        weight = otherWeight = 0.85f;
+                        break;
+                    case Activity.Carry:
+                        // a crate or basket held against the belly
+                        gestureHand.localPosition = new Vector3(0.17f, 0.98f, 0.3f);
+                        otherHand.localPosition = new Vector3(-0.17f, 0.98f, 0.3f);
+                        weight = otherWeight = 0.95f;
+                        break;
+                    case Activity.Story:
+                        // the old man telling the tale: a slow hand that rises and falls with the words
+                        gestureHand.localPosition = new Vector3(0.18f, 0.85f + Mathf.Sin(time * 0.9f) * 0.12f + beat * 0.15f, 0.34f + slow * 0.1f);
+                        otherHand.localPosition = new Vector3(-0.16f, 0.62f, 0.24f);            // resting on the knee
+                        weight = 0.7f; otherWeight = 0.6f;
+                        break;
+                    case Activity.Listen:
+                        gestureHand.localPosition = new Vector3(0.12f, 0.5f, 0.28f);            // hands on knees, rapt
+                        otherHand.localPosition = new Vector3(-0.12f, 0.5f, 0.28f);
+                        weight = otherWeight = 0.6f;
+                        break;
+                }
+            }
+            else if (gestureHand != null && afraid)
+            {
+                // afraid: a hand comes up toward the mouth, the other half-raised
+                gestureHand.localPosition = new Vector3(0.05f, 1.42f, 0.22f);
+                otherHand.localPosition = new Vector3(-0.2f, 1.1f, 0.25f);
+                weight = 0.9f; otherWeight = 0.5f;
+            }
+            rig.Sit = !afraid && (activity == Activity.Sit || activity == Activity.Story || activity == Activity.Listen) ? 1f : 0f;
+            rig.RightHandTarget = gestureHand;
+            rig.RightHandWeight = Mathf.MoveTowards(rig.RightHandWeight, weight, Time.deltaTime * 1.5f);
+            rig.LeftHandTarget = otherHand;
+            rig.LeftHandWeight = Mathf.MoveTowards(rig.LeftHandWeight, otherWeight, Time.deltaTime * 1.5f);
             rig.Apply(Time.deltaTime);
         }
 
@@ -123,8 +214,22 @@ namespace NasconGJ.Cutscenes
             lookTarget = target;
         }
 
+        /// <summary>Gone in an instant (inside the darkness, nobody sees it happen).</summary>
+        public void Erase()
+        {
+            stopped = true;
+            foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+            enabled = false;
+        }
+
         /// <summary>The Void takes them: they drain to black, then come apart as smoke.</summary>
-        public void Shadowify(float duration) => StartCoroutine(Drain(duration));
+        public void Shadowify(float duration, bool statue = false)
+        {
+            keepStatue = statue;
+            StartCoroutine(Drain(duration));
+        }
+
+        private bool keepStatue;
 
         private IEnumerator Drain(float duration)
         {
@@ -138,6 +243,12 @@ namespace NasconGJ.Cutscenes
                 yield return null;
             }
             Tint(1f);
+            if (keepStatue)
+            {
+                // they stay where they stood: a black statue of themselves, smoke curling off
+                if (smoke != null) { var em = smoke.emission; em.rateOverTime = 6f; }
+                yield break;
+            }
             yield return new WaitForSeconds(0.25f);
             if (smoke != null) smoke.Emit(60);
             // the body is gone; only the shadow on the wall remains

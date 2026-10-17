@@ -41,6 +41,7 @@ namespace NasconGJ.EditorTools.Generation
             prefabCache.Clear();
             BuildMainMenu();
             BuildPrologue();
+            BuildPrologueTown();
             BuildL01();
             BuildPlaceholderLevel(SceneNames.NarrowPath, "L02 — Narrow Path", "Shadow on the left, exit on the right.\nPlace a lit item to hold it back.");
             BuildPlaceholderLevel(SceneNames.MultiStory, "L03 — Multi Story", "Free the shadow so it climbs upward,\nthen drop down and escape.");
@@ -147,6 +148,7 @@ namespace NasconGJ.EditorTools.Generation
             var player = AddPlayer(s, new Vector3(0, 0.05f, -0.9f), 15f);
             GenUtil.Set(player.GetComponent<PlayerInventory>(), "startingItemPrefab", null);
             var wake = player.AddComponent<WakeUpSequence>();
+            GenUtil.Set(wake, "wakeClip", AssetDatabase.LoadAssetAtPath<AudioClip>(GenUtil.Root + "/Audio/Designed/SFX_WakeRinging.ogg"));
             GenUtil.Set(wake, "faceOnWake", dropped.transform);
             BuildIntroDirector(s, dropped, stick, freshTorch);
             GenUtil.Set(s.Hud.GetComponent<ScreenFader>(), "fadeInOnStart", 3.5f);
@@ -409,6 +411,7 @@ namespace NasconGJ.EditorTools.Generation
             var volumes = new GameObject("Volumes").transform;
             volumes.SetParent(lighting, false);
             AddVolume(volumes);
+            volumes.gameObject.AddComponent<ComicLook>();
             AddEventSystem(ui);
             PlaceAt(UIPrefabGenerator.MainMenuPath, ui, Vector3.zero, Quaternion.identity);
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), Scenes + "Core/MainMenu.unity");
@@ -446,6 +449,7 @@ namespace NasconGJ.EditorTools.Generation
             Sub("Checkpoints", s.Gameplay);
 
             AddVolume(s.Volumes);
+            s.Volumes.gameObject.AddComponent<ComicLook>(); // ink outlines + toon colour (NASCON/ComicPost)
             AddEventSystem(s.UI);
             s.Hud = PlaceAt(UIPrefabGenerator.HUDPath, s.UI, Vector3.zero, Quaternion.identity);
             return s;
@@ -705,7 +709,7 @@ namespace NasconGJ.EditorTools.Generation
             box.isTrigger = true;
             box.size = size;
             var wind = go.AddComponent<AudioSource>();
-            wind.clip = AudioGenerator.Load("AMB_Wind");
+            wind.clip = AudioGenerator.Real("AMB_Wind.ogg", "AMB_Wind");
             wind.loop = true;
             wind.playOnAwake = true;
             wind.spatialBlend = 0.6f;

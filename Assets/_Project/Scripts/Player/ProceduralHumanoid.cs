@@ -37,8 +37,12 @@ namespace NasconGJ.Player
         public float Crouch { get; set; }
         /// <summary>Degrees, positive looks down (camera convention).</summary>
         public float LookPitch { get; set; }
-        /// <summary>Optional world point the head/chest turn toward (overrides pitch).</summary>
+        /// <summary>Optional world point the head/chest turn toward (overrides pitch). Changes are eased, never snapped.</summary>
         public Transform LookTarget { get; set; }
+        /// <summary>0 = standing, 1 = seated (hips at about knee height; put a bench under them).</summary>
+        public float Sit { get; set; }
+        /// <summary>0 = upright, 1 = old and stooped (elder posture).</summary>
+        public float Stoop { get; set; }
 
         public Transform RightHandTarget { get; set; }
         public float RightHandWeight { get; set; }
@@ -62,6 +66,13 @@ namespace NasconGJ.Player
         private bool hasLast;
         private struct Foot { public Vector3 planted, from, land; public bool swinging, init; }
         private readonly Foot[] feet = new Foot[2];
+
+        // personality: every character stands, breathes and fidgets a little differently
+        private float seed, slouch, headTilt, armRest, idleRate;
+        // eased look-at
+        private Vector3 lookPoint;
+        private float lookWeight, sitBlend;
+        private bool lookInit;
 
         private void Awake()
         {
@@ -88,6 +99,11 @@ namespace NasconGJ.Player
             head = Bone(HumanBodyBones.Head);
             chest = Bone(HumanBodyBones.Chest) ?? Bone(HumanBodyBones.Spine);
             time = Random.value * 10f;
+            seed = Mathf.Abs(transform.position.x * 0.731f + transform.position.z * 1.379f) % 10f + Random.value;
+            slouch = Mathf.Lerp(-0.04f, 0.1f, Mathf.PerlinNoise(seed, 0.3f));
+            headTilt = Mathf.Lerp(-0.12f, 0.12f, Mathf.PerlinNoise(seed, 1.7f));
+            armRest = Mathf.Lerp(-0.08f, 0.1f, Mathf.PerlinNoise(seed, 2.9f));
+            idleRate = Mathf.Lerp(0.8f, 1.25f, Mathf.PerlinNoise(seed, 4.1f));
 
             // legs: 0 = left, 1 = right. Ankle height and stance width measured from the bind pose.
             legUpper[0] = Bone(HumanBodyBones.LeftUpperLeg); legLower[0] = Bone(HumanBodyBones.LeftLowerLeg); legFoot[0] = Bone(HumanBodyBones.LeftFoot);
@@ -118,16 +134,25 @@ namespace NasconGJ.Player
             var m = pose.muscles;
             for (int i = 0; i < m.Length; i++) m[i] = 0f;
 
-            // ---- spine: breathing, lean into motion, crouch hunch, look pitch
+            // ---- spine: breathing, lean into motion, crouch hunch, look pitch, personal posture
             float pitch = Mathf.Clamp(LookPitch / 80f, -1f, 1f);
-            Set(m, "Spine Front-Back", 0.06f + breath * breathDepth * 0.4f + w * 0.08f + run * 0.1f + Crouch * 0.35f + pitch * 0.15f);
-            Set(m, "Chest Front-Back", breath * breathDepth + Crouch * 0.2f + pitch * 0.2f);
-            Set(m, "UpperChest Front-Back", breath * breathDepth * 0.6f + pitch * 0.15f);
-            Set(m, "Spine Twist Left-Right", s * 0.08f * w);
+            sitBlend = Mathf.MoveTowards(sitBlend, Mathf.Clamp01(Sit), dt * 1.5f);
+            float st = sitBlend;
+            float idle = 1f - w;
+            float it = time * idleRate;
+            float shift = Mathf.Sin(it * 0.31f) * 0.6f + Mathf.Sin(it * 0.13f + seed) * 0.4f;       // slow weight shift side to side
+            float fidget = (Mathf.PerlinNoise(it * 0.35f, seed) - 0.5f);                              // small unconscious moves
+            Set(m, "Spine Front-Back", 0.06f + slouch + Stoop * 0.45f + breath * breathDepth * 0.4f + w * 0.08f + run * 0.1f + Crouch * 0.35f + pitch * 0.15f + st * 0.12f);
+            Set(m, "Chest Front-Back", breath * breathDepth + Stoop * 0.3f + Crouch * 0.2f + pitch * 0.2f);
+            Set(m, "UpperChest Front-Back", breath * breathDepth * 0.6f + Stoop * 0.2f + pitch * 0.15f);
+            Set(m, "Spine Twist Left-Right", s * 0.08f * w + fidget * 0.08f * idle);
             Set(m, "Chest Twist Left-Right", -s * 0.1f * w);
-            Set(m, "Neck Nod Down-Up", -pitch * 0.25f);
-            Set(m, "Head Nod Down-Up", -pitch * 0.45f + breath * 0.02f);
-            Set(m, "Spine Left-Right", Mathf.Sin(time * 0.37f) * 0.04f * (1f - w)); // idle weight shift
+            Set(m, "Spine Left-Right", shift * 0.05f * idle * (1f - st));
+            Set(m, "Chest Left-Right", -shift * 0.03f * idle);
+            Set(m, "Neck Nod Down-Up", -pitch * 0.25f - Stoop * 0.25f);
+            Set(m, "Head Nod Down-Up", -pitch * 0.45f + breath * 0.02f + Stoop * 0.3f + (Mathf.PerlinNoise(it * 0.5f, seed + 3f) - 0.5f) * 0.12f * idle);
+            Set(m, "Head Tilt Left-Right", headTilt + (Mathf.PerlinNoise(it * 0.4f, seed + 5f) - 0.5f) * 0.15f * idle);
+            Set(m, "Head Turn Left-Right", (Mathf.PerlinNoise(it * 0.3f, seed + 7f) - 0.5f) * 0.25f * idle);
 
             // ---- legs: walk cycle (left/right in antiphase), soft knees when idle, crouch
             float idleKnee = 0.05f + Mathf.Sin(time * 0.37f) * 0.03f;
@@ -137,6 +162,15 @@ namespace NasconGJ.Player
                 float ls = side == 0 ? s : -s;
                 float lc = side == 0 ? c : -c;
                 float lift = Mathf.Max(0f, lc); // knee bends while the leg swings forward
+                if (st > 0.01f)
+                {
+                    // seated: thighs forward, shins down, feet flat, knees a little apart
+                    Set(m, $"{L} Upper Leg Front-Back", Mathf.Lerp(0.1f, 0.95f, st));
+                    Set(m, $"{L} Upper Leg In-Out", Mathf.Lerp(0.08f, 0.22f, st));
+                    Set(m, $"{L} Lower Leg Stretch", Mathf.Lerp(0.75f, -0.95f, st));
+                    Set(m, $"{L} Foot Up-Down", Mathf.Lerp(0f, 0.25f, st));
+                    continue;
+                }
                 if (footIK)
                 {
                     // a little bend so the knee plane is defined; the IK below places the feet
@@ -155,27 +189,39 @@ namespace NasconGJ.Player
             {
                 string A = side == 0 ? "Left" : "Right";
                 float swingDir = side == 0 ? -s : s;
-                Set(m, $"{A} Shoulder Down-Up", -0.35f + breath * 0.04f);
-                Set(m, $"{A} Arm Down-Up", -0.85f);
-                Set(m, $"{A} Arm Front-Back", 0.12f + swingDir * armSwing * w);
+                float drift = (Mathf.PerlinNoise(it * 0.45f, seed + side * 11f) - 0.5f) * 0.1f * idle;
+                Set(m, $"{A} Shoulder Down-Up", -0.35f + breath * 0.04f + Stoop * 0.1f);
+                Set(m, $"{A} Arm Down-Up", -0.85f + armRest * 0.5f + drift * 0.5f + st * 0.15f);
+                Set(m, $"{A} Arm Front-Back", 0.12f + armRest + drift + swingDir * armSwing * w + st * 0.35f);
                 Set(m, $"{A} Arm Twist In-Out", 0.1f);
-                Set(m, $"{A} Forearm Stretch", 0.75f - w * 0.15f);
+                Set(m, $"{A} Forearm Stretch", 0.75f - w * 0.15f - st * 0.6f - Stoop * 0.2f);
                 Set(m, $"{A} Forearm Twist In-Out", 0.2f);
                 Set(m, $"{A} Hand Down-Up", 0.05f);
             }
 
             pose.muscles = m;
-            pose.bodyPosition = bindBodyPosition + Vector3.up * (footIK ? -Crouch * 0.35f - 0.03f - 0.02f * w + bob : -Crouch * 0.35f + Mathf.Abs(c) * 0.02f * w);
+            float sitDrop = st * 0.42f;
+            pose.bodyPosition = bindBodyPosition + Vector3.up * (footIK && st < 0.01f ? -Crouch * 0.35f - 0.03f - 0.02f * w + bob : -Crouch * 0.35f - sitDrop + Mathf.Abs(c) * 0.02f * w)
+                                + Vector3.up * (breath * 0.004f);
             pose.bodyRotation = bindBodyRotation;
             handler.SetHumanPose(ref pose);
 
-            if (footIK) SolveLegs(dt);
+            if (footIK && st < 0.01f) SolveLegs(dt);
+            else { feet[0].init = feet[1].init = false; }
 
-            // ---- look at a world target (menus/cutscenes)
-            if (LookTarget != null && head != null && chest != null)
+            // ---- look at a world target (menus/cutscenes): eased, so switching targets turns the head, never snaps
+            float wantLook = LookTarget != null ? 1f : 0f;
+            if (LookTarget != null)
             {
-                RotateToward(chest, LookTarget.position, 0.25f);
-                RotateToward(head, LookTarget.position, 0.6f);
+                if (!lookInit) { lookPoint = head != null ? head.position + transform.forward * 3f : LookTarget.position; lookInit = true; }
+                lookPoint = Vector3.Lerp(lookPoint, LookTarget.position, 1f - Mathf.Exp(-dt * 4f));
+            }
+            lookWeight = Mathf.MoveTowards(lookWeight, wantLook, dt * 1.8f);
+            if (lookWeight > 0.001f && head != null && chest != null)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, lookWeight);
+                RotateToward(chest, lookPoint, 0.25f * k);
+                RotateToward(head, lookPoint, 0.6f * k);
             }
 
             // ---- hands

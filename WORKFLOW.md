@@ -61,7 +61,7 @@ NASCON-GJ/
 | `Death/` | Darkness state, delayed death, sound-only phase |
 | `Audio/` | Audio manager, ambience, 3D sound cues |
 | `UI/` | Main menu, HUD, pause, fade |
-| `Cutscenes/` | Code-driven cutscenes: `PrologueDirector` (shot timeline), `CutsceneActor` (walk/fall a procedural character), `CutsceneUI` (letterbox, captions, title, hold-to-skip), `Villager` |
+| `Cutscenes/` | Code-driven cutscenes. `Cutscenes/Scroll/` is the 2D story-scroll prologue (`ScrollDirector`, `InkPuppet`, `InkPanel`, `InkTransitionOverlay`, `ScrollLook`). `CutsceneUI` (letterbox, captions, title, hold-to-skip). The old 3D `PrologueDirector`, `CutsceneActor`, `Villager` are no longer used by C01 |
 | `Utilities/` | Generic helpers |
 | `Modules/` | **Auto-generated** mirror of `MODULES/`. Don't edit by hand |
 | `Editor/` | Editor tools (`NASCON/` menu). `Editor/Generation/` = procedural asset + scene generator |
@@ -101,7 +101,8 @@ Layers: `6 Player, 7 Interactable, 8 ShadowSurface, 9 ShadowEnemy, 10 LightBlock
 |---|---|---|
 | 0 | `Core/Boot` | Bootstrapper → loads MainMenu |
 | 1 | `Core/MainMenu` | Menu |
-| 2 | `Cutscenes/C01_Prologue` | Town turned to shadows, approach tomb, lightning, fall |
+| 2 | `Cutscenes/C01_Prologue` | 2D ink-scroll puppets, ~60 s: the elder's tale of the Void (the past is paper) |
+| 2b | `Cutscenes/C01b_PrologueTown` | 3D, ~57 s: busy town → rooftop talk with the sister → the Void → shockwave → the one left → the tomb → hard black → memory fall (`MemoryFall`, `NASCON/MemoryGlitch`, `MUS_MemoryFall`) → L01. Built by `LevelBuilder.PrologueTown` (`BuildPrologueTownOnly()`) |
 | 3 | `Levels/L01_TombEntrance` | Wake up in narrow space, meet guiding light, learn fire |
 | 4 | `Levels/L02_NarrowPath` | Puzzle: drop a light item to hold back the shadow, reach exit |
 | 5 | `Levels/L03_MultiStory` | Puzzle: free the shadow upward, drop down to escape |
@@ -118,6 +119,8 @@ Each gameplay scene has the same hierarchy: `SYSTEMS / ENVIRONMENT (Kit, Props_L
 Levels are separate scenes on purpose, so **each dev can own a different level at the same time** with zero scene conflicts.
 
 ---
+
+Full cutscene plan (C01 → C02 ending, L06 escape, assets needed): `DOCUMENTATION/CUTSCENE_PLAN.md`.
 
 ## 3b. What's already playable (vertical slice)
 
@@ -148,9 +151,9 @@ Open `L01_TombEntrance` (or your sandbox) and press Play. **MainMenu → "Enter 
 | Intro | `Player/WakeUpSequence` | L01 start: lying dazed on the floor looking up the shaft, then getting up |
 | Guiding light | `GuidingLight/GuidingLight` + `DialogueData` | Route of stops, 1–2 short lines each with the speaker name "THE GUIDING LIGHT", auto-advancing unless `Hold` is set. Shrinks when the camera is close. Also a light source that shadows avoid |
 | Music | `Audio/MusicDirector` | Uses the team's tracks from `DOCUMENTATION/Music And Audio` (copied to `Audio/Music/`): `MUS_MainAmbience` always, `MUS_Presence` fades in with threat (a hunting shadow within 12 m, or darkness). The menu plays `MUS_MainAmbience` |
-| Audio | `Audio/FlameAudio`, `Audio/RandomOneShots` | Fire crackle follows each flame (muffled when covered). Drips in the dark. Footsteps, heartbeat in darkness, shadow whispers, lunge screech, wind, drone. All synthesised by `AudioGenerator` into `Audio/Generated` (swap files 1:1 for real recordings) |
+| Audio | `Audio/FlameAudio`, `Audio/RandomOneShots` | Fire crackle follows each flame (muffled when covered). Drips in the dark. Footsteps, heartbeat, torch crackle/ignite and wind are **real CC0 recordings** from `Audio/CC0/` (sources in `CREDITS.md`, loaded via `AudioGenerator.Real(file, synthFallback)`). Shadow whispers, lunge, drips, drone and UI are still synthesised into `Audio/Generated` |
 | UI | `UI/HUDController`, `DialogueUI`, `HintUI`, `ScreenFader`, `PauseMenu` | Prompt, fuel bar, cover meter, transfer ring, messages, typewriter dialogue (pale-cyan band), key hints, fades, Esc pause |
-| Prologue | `Cutscenes/PrologueDirector`, `VoidApparition`, `Villager`, `SurfaceTint` | ~75 s: crane over a bright, painted town → dolly beside a townsperson → the sky turns red and the Void rises as a colossal silhouette at the end of the street while everyone looks up → close: they drain into smoke, their shadows left on the walls, the lamps die → wide: the dead town → (older beats:)  the bearer crosses the wasteland (title card) → the tomb in a storm with lightning → the floor gives way and they fall. Then L01 (they wake at the bottom). Hold Space/Enter/Esc to skip. Placeholder models are generated; swap any of them, the director only needs the references |
+| Prologue | `Cutscenes/Scroll/ScrollDirector` (+ `InkPuppet`, `InkPanel`, `InkTransitionOverlay`) | ~4 min story scroll in the style of the Kung Fu Panda backstory sequences: ink-wash panels (gold sky, teal karst, Tsushima village, calligraphy + red seal) with jointed shadow puppets, cut together with ink-drop / brush-sweep transitions. Beats follow the narration script (captions via `CutsceneUI`; swap in recorded VO later): lantern → town life → elder by the fire → legend landscape → children's shadows become the Void → the Void in the dark → it reaches → nobody believes → seasons pass → lamps die → it passes over → the town emptied, shadows burned into walls → the bearer → the hills → the tomb (lightning reveals those who came before) → the fall → L01. Hold Space/Enter/Esc to skip. Everything is generated: `InkArtGenerator` paints the art, `LevelBuilder.Prologue` lays out the 6 panels |
 | Main menu | `UI/MainMenuController`, `MenuButtonFX`, `MenuCameraDrift` | Title and menu only (no tagline). **Begin** plays the prologue. Staged intro, animated items (crystal marker, ember underline, sound), Settings (sensitivity, volume, brush strokes, fullscreen) and Credits panels, Esc to go back, drifting camera over the torch-bearer and the Void |
 | Settings | `Core/GameSettings` | PlayerPrefs-backed; applied on boot |
 | Level flow | `Puzzles/LevelExit` | Trigger → fade → `SceneLoader.LoadNext()`; optional `requiredPuzzleId` gate |
@@ -165,7 +168,7 @@ All environment art is **generated by code** in `Scripts/Editor/Generation/`. Th
 
 | Step | Makes |
 |---|---|
-| 1. Textures + Materials | Stone grit, soft particle, HUD ring and shadow silhouette textures; URP materials; `VP_Tomb` post-processing |
+| 1. Textures + Materials | Stone grit, soft particle, HUD ring and shadow silhouette textures; ink-scroll art for the prologue (`InkArtGenerator` → `Art/Textures/Generated/Ink`: landscapes, village, puppets, the Void, calligraphy); URP materials; `VP_Tomb` / `VP_Scroll` post-processing |
 | 2. Environment Kit | 4 m modular tomb kit: wall, doorway, floor, ceiling, pillar (+broken), stairs, blocks, rubble, altar, obelisk; town pieces for the prologue: 3 timber houses with warm windows, lamp post |
 | 3. Gameplay + UI Prefabs | Torch / stick / candle (burnable), braziers, guiding light, shadow creature, 4 placeholder villagers, player, HUD, main-menu + cutscene canvases, dialogue assets |
 | 4. Rebuild Scenes | **Overwrites** MainMenu, C01_Prologue, L01–L06 and the sandboxes. To iterate on the cutscene alone, call `LevelBuilder.BuildPrologueOnly()` |
@@ -188,6 +191,8 @@ The painted look of the concept boards comes from three custom shaders. **Use th
 | `NASCON/StylizedFlame` | All fire / wisp particles | Cream `Core`, teal `Rim`, `Cutoff` + noise for hard painted edges. Particle Color over Lifetime tints the body |
 | `NASCON/ShadowCreature` | Shadow sprites (enemies, townsfolk, Void relief) | Sheet channels R body / G glow (halo, eyes, maw, burning rim) / B inner streaks; `_Glow`, `_Dissolve`, smoke `_Wobble` |
 | `NASCON/LightShaft` | God rays through ceiling cracks (`PF_LightShaft`) | `_Color`, `_Intensity`, edge softness, end fades |
+| `NASCON/InkLayer` | Prologue scroll layers + puppets | Mask texture R cover / G tone / B accent; `_LightColor`/`_DarkColor`/`_AccentColor`, `_Atmos`, `_Reveal` brush wipe, `_Silhouette`, `_Lamp` (accent glows at night) |
+| `NASCON/InkPaper`, `InkFire`, `InkGlow`, `InkTransition` | Prologue paper backdrop, painted flame, additive light bloom, full-screen ink-drop / brush-sweep cuts | see shader headers |
 | `NASCON/PainterlyPost` | Full-screen pass (`PainterlyPass` feature on `Assets/Settings/PC_Renderer`), runs before post-processing | `Brush Radius` (Kuwahara brush strokes), palette ramp + strength, paper grain. Edit `M_PainterlyPost` to tune the whole game's look |
 
 ### Main character (Meshy)

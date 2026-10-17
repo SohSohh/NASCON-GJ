@@ -34,6 +34,13 @@ namespace NasconGJ.Player
         [SerializeField] private float palmDistance = 0.07f;
         [Tooltip("Height of the grip above the held item's pivot (matches CarryableItem hold offsets).")]
         [SerializeField] private float gripHeight = 0.12f;
+        [Tooltip("0 = keep the item's hold rotation, 1 = turn the handle to run through the fist (across the forearm).")]
+        [SerializeField, Range(0f, 1f)] private float gripAlign = 0.85f;
+
+        [Header("Walls")]
+        [Tooltip("Pull the hand (and the torch) in toward the chest when a wall is closer than the arm reaches.")]
+        [SerializeField] private float wallClearance = 0.14f;
+        [SerializeField] private Vector3 tuckedOffset = new(0.07f, -0.2f, -0.2f);
 
         // kept for prefab compatibility (were IK rotations for the Animator version)
         [SerializeField, HideInInspector] private Vector3 rightGripEuler;
@@ -45,11 +52,15 @@ namespace NasconGJ.Player
         private PlayerInventory inventory;
         private ProceduralHumanoid rig;
         private Transform bodyRoot, hidden, rightHand, rightForearm;
-        private float bodyBaseY, coverWeight, holdWeight;
+        private float bodyBaseY, coverWeight, holdWeight, retract;
+        private Vector3 socketBase;
+        private bool socketInit;
+        private int wallMask;
 
         private void Awake()
         {
             controller = GetComponent<FirstPersonController>();
+            wallMask = ~LayerMask.GetMask("Player", "Ignore Raycast", "UI");
             carrier = GetComponent<FireCarrier>();
             inventory = GetComponent<PlayerInventory>();
             if (bodyAnimator == null) return;
@@ -117,6 +128,7 @@ namespace NasconGJ.Player
             coverWeight = Mathf.MoveTowards(coverWeight, carrier != null && carrier.IsCovering ? 1f : 0f, dt * 6f);
             holdWeight = Mathf.MoveTowards(holdWeight, inventory != null && inventory.ActiveItem != null ? 1f : 0f, dt * 5f);
 
+            RetractFromWalls(dt);
             rig.Speed = controller != null ? controller.HorizontalSpeed : 0f;
             rig.LookPitch = view != null ? NormalizePitch(view.parent != null ? view.parent.localEulerAngles.x : view.localEulerAngles.x) : 0f;
             rig.RightHandTarget = rightHandTarget;
@@ -138,13 +150,45 @@ namespace NasconGJ.Player
 
         private static float NormalizePitch(float x) => x > 180f ? x - 360f : x;
 
-        /// <summary>The rig has no finger bones, so instead of trusting the IK we move the held item so its grip sits in the palm.</summary>
+        /// <summary>
+        /// The hold point sits ahead of the capsule, so up against a wall the arm and torch would sink into it.
+        /// Cast along the arm; when something is closer than the reach, tuck the hand (and the item) in toward the chest.
+        /// </summary>
+        private void RetractFromWalls(float dt)
+        {
+            if (rightHandTarget == null || view == null) return;
+            if (!socketInit) { socketBase = rightHandTarget.localPosition; socketInit = true; }
+            Vector3 dir = view.TransformDirection(new Vector3(socketBase.x * 0.5f, socketBase.y * 0.3f, socketBase.z)).normalized;
+            float reach = socketBase.magnitude + 0.2f; // hand plus the torch head in front of it
+            float want = 0f;
+            if (Physics.SphereCast(view.position, 0.09f, dir, out var hit, reach + wallClearance, wallMask, QueryTriggerInteraction.Ignore))
+                want = Mathf.Clamp01((reach + wallClearance - hit.distance) / reach);
+            // also feel straight ahead, so a wall met head-on (not along the arm) tucks the hand too
+            if (Physics.SphereCast(view.position, 0.12f, view.forward, out var front, reach, wallMask, QueryTriggerInteraction.Ignore))
+                want = Mathf.Max(want, Mathf.Clamp01((reach - front.distance) / reach));
+            retract = Mathf.MoveTowards(retract, want, dt * (want > retract ? 6f : 2.5f)); // snap in, ease back out
+            float k = Mathf.SmoothStep(0f, 1f, retract);
+            rightHandTarget.localPosition = socketBase + tuckedOffset * k;
+        }
+
+        /// <summary>
+        /// The rig has no finger bones, so instead of trusting the IK we move the held item into the palm and turn it
+        /// so the handle runs through the closed fist (across the forearm, mostly upright), never through the wrist.
+        /// </summary>
         private void GlueItemToHand()
         {
             var item = inventory != null ? inventory.ActiveItem : null;
-            if (item == null || rightHand == null || rightForearm == null || holdWeight < 0.5f) return;
-            if (rightHandTarget == null || Vector3.Distance(rightHand.position, rightHandTarget.position) > 0.12f) return;
+            if (item == null || rightHand == null || rightForearm == null || holdWeight < 0.01f) return;
+            if (rightHandTarget == null || Vector3.Distance(rightHand.position, rightHandTarget.position) > 0.4f) return;
             Vector3 along = (rightHand.position - rightForearm.position).normalized;
+            Vector3 viewUp = view != null ? view.up : Vector3.up;
+            Vector3 up = Vector3.ProjectOnPlane(viewUp, along);
+            up = up.sqrMagnitude < 1e-4f ? viewUp : Vector3.Slerp(up.normalized, Vector3.up, 0.35f).normalized;
+            Vector3 fwd = Vector3.ProjectOnPlane(view != null ? view.forward : transform.forward, up);
+            Quaternion grip = Quaternion.LookRotation(fwd.sqrMagnitude < 1e-4f ? transform.forward : fwd, up);
+            Quaternion hold = item.transform.parent.rotation * Quaternion.Euler(item.HoldRotationOffset);
+            item.transform.rotation = Quaternion.Slerp(hold, grip, gripAlign * holdWeight);
+
             Vector3 palm = rightHand.position + along * palmDistance * bodyRoot.lossyScale.y;
             Vector3 target = palm - item.transform.up * gripHeight;
             item.transform.position = Vector3.Lerp(item.transform.parent.TransformPoint(item.HoldPositionOffset), target, holdWeight);

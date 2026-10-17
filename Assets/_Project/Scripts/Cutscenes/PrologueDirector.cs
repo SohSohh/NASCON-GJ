@@ -60,12 +60,42 @@ namespace NasconGJ.Cutscenes
         [SerializeField] private float[] takenDelays = { 3.0f, 1.2f, 1.9f, 2.6f, 3.3f, 3.7f, 4.1f };
         [SerializeField] private Transform darkFrom;
         [SerializeField] private Transform darkTo;
+        [Tooltip("Reaction close-up: someone looks up and sees it.")]
+        [SerializeField] private Transform lookUpFrom;
+        [SerializeField] private Transform lookUpTo;
+        [Tooltip("Behind the townsfolk, looking down the street as the darkness floods toward the lens.")]
+        [SerializeField] private Transform floodFrom;
+        [SerializeField] private Transform floodTo;
+        [Tooltip("Afterwards: slow push in on the shadows burned into the walls.")]
+        [SerializeField] private Transform imprintFrom;
+        [SerializeField] private Transform imprintTo;
+        [SerializeField] private Light imprintLight;
+        [SerializeField] private float floodRadius = 140f;
+        [SerializeField] private float floodSoftness = 6f;
 
         [Header("3–5. The bearer")]
         [SerializeField] private CutsceneActor bearer;
+        [Header("Rooftop (present day)")]
+        [SerializeField] private Villager girl;
+        [SerializeField] private Transform roofBearer;
+        [SerializeField] private Transform roofWideFrom, roofWideTo, roofGirl, roofBearerCam, roofLookUp, roofVoid;
+        [SerializeField] private MemoryFall memoryFall;
+        [Header("Voice-over (played in order, one per Line)")]
+        [SerializeField] private AudioSource voice;
+        [SerializeField] private AudioClip[] voiceLines;
+        private int voiceIndex;
+        [SerializeField] private AudioSource stormAmbience;
+        [Header("Sound design")]
+        [SerializeField] private AudioSource thunderSource;   // the long thunder roll (AMB_RainThunder), cued per strike
+        [SerializeField] private AudioSource windAmbience;    // the Void's wind
+        [SerializeField] private AudioSource lowSource;       // pitched-down one-shots (impacts, crackle)
+        [SerializeField] private AudioClip laughClip, crackleClip, swishHeavyClip;
+        [SerializeField] private AudioClip fallClip, cryClip;
+        [SerializeField] private AudioSource insideAmbience;   // dripping dark inside the tomb
+        [SerializeField] private AudioSource padSource;        // a lone pad under the walk to the tomb
         [SerializeField] private Transform[] walkPath;
-        [SerializeField] private Vector3 followStart = new(0.6f, 0.75f, 2.4f);   // low, in front: the torch passing the lens
-        [SerializeField] private Vector3 followEnd = new(3.2f, 1.6f, 0.4f);      // drifting out to the side
+        [SerializeField] private Vector3 followStart = new(0.5f, 1.55f, 1.7f);   // chest-up, in front: the torch passing the lens
+        [SerializeField] private Vector3 followEnd = new(1.8f, 1.6f, 0.9f);      // drifting out to the side
         [SerializeField] private Transform tombFrom;
         [SerializeField] private Transform tombTo;
         [SerializeField] private Transform doorwayFrom;
@@ -84,12 +114,19 @@ namespace NasconGJ.Cutscenes
         [SerializeField] private AudioClip thunderClip;
         [SerializeField] private AudioClip collapseClip;
         [SerializeField] private AudioClip impactClip;
+        [SerializeField] private AudioSource townAmbience;
+        [SerializeField] private AudioSource townMurmur;
+        [SerializeField] private AudioClip whooshClip;
+        [SerializeField] private AudioClip riserClip;
+        [SerializeField] private AudioClip boomClip;
+        [SerializeField] private AudioClip ringClip;
+        [SerializeField] private AudioClip heartbeatClip;
 
         [Header("Atmospheres")]
         [SerializeField] private Atmosphere day = new()
         {
-            sky = new Color(0.62f, 0.74f, 0.88f), ambient = new Color(0.42f, 0.4f, 0.45f), fog = new Color(0.66f, 0.72f, 0.8f),
-            sun = new Color(1f, 0.86f, 0.66f), fogDensity = 0.006f, sunIntensity = 1.9f, sunEuler = new Vector3(32f, 28f, 0f), outdoor = 1f, palette = 0.85f,
+            sky = new Color(0.55f, 0.78f, 0.98f), ambient = new Color(0.5f, 0.47f, 0.55f), fog = new Color(0.72f, 0.82f, 0.95f),
+            sun = new Color(1f, 0.9f, 0.72f), fogDensity = 0.004f, sunIntensity = 2.1f, sunEuler = new Vector3(32f, 28f, 0f), outdoor = 1f, palette = 0.85f,
         };
         [SerializeField] private Atmosphere theVoid = new()
         {
@@ -116,6 +153,11 @@ namespace NasconGJ.Cutscenes
         [SerializeField] private float holdToSkip = 1.2f;
 
         private static readonly int PaletteReduceId = Shader.PropertyToID("_NasconPaletteReduce");
+        private static readonly int SkyTopId = Shader.PropertyToID("_NasconSkyTop");
+        private static readonly int SkyHorizonId = Shader.PropertyToID("_NasconSkyHorizon");
+        private static readonly int SkyCloudId = Shader.PropertyToID("_NasconSkyCloud");
+        private static readonly int SkyGlowId = Shader.PropertyToID("_NasconSkyGlow");
+        private static readonly int SkyGlowDirId = Shader.PropertyToID("_NasconSkyGlowDir");
 
         private Vector3 basePos;
         private Quaternion baseRot = Quaternion.identity;
@@ -133,7 +175,13 @@ namespace NasconGJ.Cutscenes
             runRoutine = StartCoroutine(Run());
         }
 
-        private void OnDestroy() => Shader.SetGlobalFloat(PaletteReduceId, 0f);
+        private void OnDestroy()
+        {
+            Shader.SetGlobalFloat(PaletteReduceId, 0f);
+            ComicLook.SetVoid(Vector3.zero, 0f, 1f);
+            ComicLook.SetImpact(0f);
+            ComicLook.SetDrain(0f);
+        }
 
         // ------------------------------------------------------------ the film
 
@@ -141,97 +189,168 @@ namespace NasconGJ.Cutscenes
         {
             ui.Letterbox(true, 0.01f);
             Apply(day);
-            if (music != null) { music.volume = 0f; StartCoroutine(FadeAudio(music, 0.65f, 3f)); }
+            if (music != null) { music.volume = 0f; StartCoroutine(FadeAudio(music, 0.55f, 2f)); }
+            ComicLook.Apply(0.7f, 0.55f, 0f);
+            ComicLook.SetDrain(0f);
+            if (townAmbience != null) { townAmbience.volume = 0f; townAmbience.Play(); StartCoroutine(FadeAudio(townAmbience, 0.55f, 1.5f)); }
+            if (townMurmur != null) { townMurmur.volume = 0f; townMurmur.Play(); StartCoroutine(FadeAudio(townMurmur, 0.3f, 2f)); }
+            var pose = bearer != null ? bearer.GetComponent<NasconGJ.Player.TorchBearerPose>() : null;
+            if (bearer != null && roofBearer != null) bearer.Teleport(roofBearer);
+            if (pose != null && girl != null) pose.LookTarget = girl.transform;
+            if (pose != null) pose.Holding = false;          // daytime: no torch
 
-            // 1a. crane down over the living town
-            CameraMove(craneFrom, craneTo, 7.5f, 40f, 34f);
-            Fade(0f, 2f);
-            yield return new WaitForSeconds(1.6f);
-            ui.Caption("There was a town.", 3.2f);
-            yield return new WaitForSeconds(5.9f);
-
-            // 1b. dolly beside someone walking the street
-            var walker = villagers.Length > 0 ? villagers[Mathf.Clamp(dollyVillager, 0, villagers.Length - 1)] : null;
-            if (walker != null) CameraFollow(walker.transform, new Vector3(-1.4f, 1.55f, -3.4f), new Vector3(1.6f, 1.45f, -3.0f), new Vector3(0f, 1.25f, 0f), 7f, false, 36f);
-            yield return new WaitForSeconds(1.1f);
-            ui.Caption("Its people lived in the light.", 3.2f);
-            yield return new WaitForSeconds(5.9f);
-
-            // 2a. the sky turns, the Void rises; everyone stops and looks up
-            CameraMove(riseFrom, riseTo, 8.5f, 46f, 38f);
-            if (sfx != null && thunderClip != null) sfx.PlayOneShot(thunderClip, 0.8f);
-            StartCoroutine(Shake(1.2f, 0.25f));
-            StartCoroutine(Blend(day, theVoid, 3.5f));
-            if (voidApparition != null) voidApparition.Rise(6.5f);
-            StartCoroutine(FadeLight(voidWash, voidWashIntensity, 4f));
-            if (music != null) StartCoroutine(FadeAudio(music, 0f, 3f));
-            if (dread != null) { dread.volume = 0f; dread.Play(); StartCoroutine(FadeAudio(dread, 0.8f, 3f)); }
-            var head = voidApparition != null ? voidApparition.Head : null;
-            for (int i = 0; i < villagers.Length; i++) StartCoroutine(LookUp(villagers[i], head, 0.6f + i * 0.18f));
-            yield return new WaitForSeconds(1.6f);
-            ui.Caption("Then the Void came.", 3.2f);
-            yield return new WaitForSeconds(6.9f);
-
-            // 2b. close: they are taken
-            CameraMove(takenFrom, takenTo, 8.5f, 40f, 34f);
-            if (voidApparition != null) voidApparition.Flare();
-            for (int i = 0; i < villagers.Length; i++)
-                StartCoroutine(TakeVillager(i, takenDelays != null && i < takenDelays.Length ? takenDelays[i] : 1f + i * 0.4f));
-            yield return new WaitForSeconds(2.6f);
-            ui.Caption("Everyone it touched became a shadow.", 3.2f);
-            yield return new WaitForSeconds(1.6f);
-            StartCoroutine(LightsOut(3f)); // the lamps die after the people do
-            yield return new WaitForSeconds(4.3f);
-
-            // 2c. wide: the dead town under the Void
-            CameraMove(darkFrom, darkTo, 5.5f, 50f, 44f);
-            yield return new WaitForSeconds(4.6f);
-            yield return Fade(1f, 0.9f);
-
-            // 3. THE BEARER: the torch passes the lens, then we drift out beside them
-            Apply(waste);
-            bearer.Teleport(walkPath[0]);
-            bearer.Walk(walkPath, 1.25f);
-            CameraFollow(bearer.transform, followStart, followEnd, new Vector3(0f, 1.3f, 0f), 13f, true, 44f);
-            if (dread != null) StartCoroutine(FadeAudio(dread, 0.35f, 2f));
-            Fade(0f, 1.4f);
-            yield return new WaitForSeconds(2f);
-            ui.Caption("One light was left.", 2.6f);
+            // 1. the town today, busy: two quick moves
+            CameraMove(craneFrom, craneTo, 4.2f, 40f, 34f);
+            Fade(0f, 0.8f);
+            ui.Caption("Years later.", 1.8f);
             yield return new WaitForSeconds(3.4f);
-            ui.Title(3.4f);
-            yield return new WaitForSeconds(7.2f);
-            yield return Fade(1f, 0.8f);
+            Cut();
+            var walker = villagers.Length > 0 ? villagers[Mathf.Clamp(dollyVillager, 0, villagers.Length - 1)] : null;
+            if (walker != null) CameraFollow(walker.transform, new Vector3(-2.2f, 1.5f, -2.6f), new Vector3(0.6f, 1.45f, -3.1f), new Vector3(0.5f, 1.35f, 0f), 3.4f, false, 36f);
+            if (sfx != null && laughClip != null) sfx.PlayOneShot(laughClip, 0.12f);   // kids somewhere down the street
+            yield return new WaitForSeconds(2.8f);
 
-            // 4a. THE TOMB, wide and low
+            // 2. a rooftop at dusk: the bearer and their sister, talking about what's left after
+            Cut();
+            CameraMove(roofWideFrom, roofWideTo, 5f, 42f, 38f);
+            StartCoroutine(SnapAfter(1.2f));
+            yield return Line(GirlName, "You ever think about the old tomb? Past the hills.", 0.1f);
+            Cut();
+            CameraMove(roofGirl, roofGirl, 4f, 30f, 27f);
+            StartCoroutine(SnapAfter(1f));
+            yield return Line(GirlName, "Grandpa swears something's still in there.", 0f);
+            Cut();
+            CameraMove(roofBearerCam, roofBearerCam, 3f, 30f, 28f);
+            StartCoroutine(SnapAfter(0.8f));
+            yield return Line(BearerName, "I mean, he also swears the well talks back.", 0f);
+            Cut();
+            CameraMove(roofGirl, roofGirl, 3f, 27f, 25f);
+            if (townAmbience != null) StartCoroutine(FadeAudio(townAmbience, 0f, 0.5f)); // the birds stop
+            if (townMurmur != null) StartCoroutine(FadeAudio(townMurmur, 0f, 1f));
+            if (music != null) StartCoroutine(FadeAudio(music, 0f, 0.6f));
+            if (windAmbience != null) { windAmbience.volume = 0f; windAmbience.Play(); StartCoroutine(FadeAudio(windAmbience, 0.55f, 3f)); }
+            yield return Line(GirlName, "...Hey. Why'd it go so quiet?", 0f);
+
+            // 3. they look up. THE VOID.
+            var head = voidApparition != null ? voidApparition.Head : null;
+            if (girl != null) girl.LookAt(head);
+            if (pose != null) pose.LookTarget = head;
+            for (int i = 0; i < villagers.Length; i++) StartCoroutine(LookUp(villagers[i], head, 0.1f + i * 0.12f));
+            Cut();
+            CameraMove(roofLookUp, roofLookUp, 2f, 34f, 30f);
+            StartCoroutine(Blend(day, theVoid, 2f));
+            if (voidApparition != null) voidApparition.Rise(4.5f);
+            // it arrives with the sky splitting open: the full thunder roll, a deep slowed boom, the air tearing
+            ThunderRoll(1f);
+            PlayLow(thunderClip, 0.5f, 1f);
+            if (sfx != null && swishHeavyClip != null) sfx.PlayOneShot(swishHeavyClip, 1f);
+            StartCoroutine(Shake(0.8f, 0.25f));
+            yield return new WaitForSeconds(1.6f);
+            CameraMove(roofVoid, roofVoid, 5.5f, 50f, 38f);
+            if (sfx != null && riserClip != null) sfx.PlayOneShot(riserClip, 0.9f);
+            if (dread != null) { dread.volume = 0f; dread.Play(); StartCoroutine(FadeAudio(dread, 0.8f, 1.5f)); }
+            StartCoroutine(FadeLight(voidWash, voidWashIntensity, 2f));
+            yield return Thunderbolt();
+            if (voidApparition != null) voidApparition.SpreadArms(0.8f);
+            StartCoroutine(SnapAfter(1.2f));
+            yield return new WaitForSeconds(1.6f);
+            yield return Thunderbolt();
+            yield return new WaitForSeconds(1.1f);
+
+            // 4. the shockwave: the street, then the rooftop. She turns to shadow beside them; the torch keeps them.
+            Cut();
+            CameraMove(floodFrom, floodTo, 3.2f, 44f, 40f);
+            Vector3 origin = voidApparition != null ? voidApparition.transform.position + Vector3.up * 12f : Vector3.zero;
+            float camDist = Vector3.Distance(origin, floodFrom.position);
+            ComicLook.SetVoidDark(0.2f);
+            var taken = new bool[villagers.Length];
+            if (sfx != null && boomClip != null) sfx.PlayOneShot(boomClip, 1f);
+            for (float t = 0f; t < 2.6f; t += Time.deltaTime)
+            {
+                float k = t / 2.6f;
+                float r = Mathf.Lerp(10f, camDist + 25f, k * k * (3f - 2f * k));
+                ComicLook.SetVoid(origin, r, floodSoftness);
+                for (int i = 0; i < villagers.Length; i++)
+                {
+                    var v = villagers[i];
+                    if (v == null || taken[i] || Vector3.Distance(origin, v.transform.position + Vector3.up) > r - floodSoftness) continue;
+                    taken[i] = true;
+                    v.Shadowify(0.4f, statue: true);
+                    if (imprints != null && i < imprints.Length && imprints[i] != null) imprints[i].SetLook(0.95f, 0f);
+                }
+                shake = 0.22f * Mathf.Sin(k * Mathf.PI);
+                yield return null;
+            }
+            shake = 0f;
+            for (int i = 0; i < villagers.Length; i++)
+                if (!taken[i] && villagers[i] != null) { villagers[i].Shadowify(0.4f, statue: true); if (imprints != null && i < imprints.Length && imprints[i] != null) imprints[i].SetLook(0.95f, 0f); }
+            ComicLook.SetVoid(origin, 2000f, floodSoftness);
+            StartCoroutine(LightsOut(1f));
+            Cut();
+            CameraMove(roofGirl, roofGirl, 2.6f, 27f, 24f);
+            if (girl != null) girl.Shadowify(0.9f, statue: true);
+            StartCoroutine(SnapAfter(1.5f));
+            if (sfx != null && ringClip != null) sfx.PlayOneShot(ringClip, 0.6f);
+            if (sfx != null && heartbeatClip != null) sfx.PlayOneShot(heartbeatClip, 0.8f);
+            if (pose != null && girl != null) pose.LookTarget = girl.transform;
+            yield return new WaitForSeconds(2.2f);
+            Cut();
+            ComicLook.SetDrain(0.25f);
+            StartCoroutine(FadeLight(imprintLight, 40f, 0.8f));
+            CameraMove(imprintFrom, imprintTo, 3.6f, 40f, 34f);
+            StartCoroutine(SnapAfter(2f));
+            yield return Line(null, "They were neither dead nor taken, but emptied.", 0f);
+            yield return Fade(1f, 0.5f);
+            ComicLook.SetDrain(0f);
+            ComicLook.SetVoid(Vector3.zero, 0f, 1f);
+            ComicLook.Apply(0.6f, 0.3f, 0f);
+
+            // 5. the one left: the torch passes the lens
+            Apply(waste);
+            if (pose != null) { pose.LookTarget = null; pose.Holding = true; } // the light they carry from now on
+            if (windAmbience != null) StartCoroutine(FadeAudio(windAmbience, 0.35f, 1f));
+            if (padSource != null) { padSource.volume = 0f; padSource.Play(); StartCoroutine(FadeAudio(padSource, 0.5f, 2f)); }
+            bearer.Teleport(walkPath[0]);
+            bearer.Walk(walkPath, 1.3f);
+            CameraFollow(bearer.transform, followStart, followEnd, new Vector3(0f, 1.45f, 0f), 7f, true, 42f);
+            if (dread != null) StartCoroutine(FadeAudio(dread, 0.35f, 1.5f));
+            Fade(0f, 0.6f);
+            yield return Line(null, "One soul was left untouched. And they remembered the old man's story.", 0.3f);
+            yield return Fade(1f, 0.4f);
+
+            // 6. the tomb
             Apply(storm);
             bearer.Teleport(tombPath[0]);
-            bearer.Walk(tombPath, 1.1f);
-            CameraMove(tombFrom, tombTo, 6f, 52f, 47f);
-            if (dread != null) StartCoroutine(FadeAudio(dread, 0.6f, 3f));
-            Fade(0f, 0.8f);
-            yield return new WaitForSeconds(2.2f);
+            bearer.Walk(tombPath, 1.2f);
+            CameraMove(tombFrom, tombTo, 4.5f, 52f, 47f);
+            if (dread != null) StartCoroutine(FadeAudio(dread, 0.6f, 2f));
+            Fade(0f, 0.4f);
+            if (windAmbience != null) StartCoroutine(FadeAudio(windAmbience, 0f, 1.5f));
+            if (padSource != null) StartCoroutine(FadeAudio(padSource, 0.25f, 2f));
+            if (stormAmbience != null) { stormAmbience.time = Mathf.Min(14f, stormAmbience.clip.length - 1f); stormAmbience.volume = 0f; stormAmbience.Play(); StartCoroutine(FadeAudio(stormAmbience, 0.8f, 0.6f)); }
+            yield return new WaitForSeconds(1.2f);
             StartCoroutine(Lightning());
-            yield return new WaitForSeconds(3.8f);
-
-            // 4b. reverse from the doorway: a silhouette against the lightning
-            CameraMove(doorwayFrom, doorwayTo, 5.5f, 46f, 42f);
-            yield return new WaitForSeconds(1.1f);
+            StartCoroutine(SnapAfter(0.06f));
+            yield return Line(null, "Many had walked into that tomb over the ages.", 0f);
+            CameraMove(doorwayFrom, doorwayTo, 3.8f, 46f, 42f);
             StartCoroutine(Lightning());
-            yield return new WaitForSeconds(3.6f);
-            yield return Fade(1f, 0.6f);
+            yield return Line(null, "None had ever walked out.", 0.2f);
 
-            // 5. THE FALL
+            // 7. inside, two steps into the dark... then nothing. Hard black, silence, and the fall through their memories.
             Apply(tomb);
             bearer.Teleport(insidePath[0]);
             bearer.Walk(insidePath, 1.2f);
             CameraFollow(bearer.transform, shoulderOffset, shoulderOffset + new Vector3(0f, 0.1f, 0.4f), new Vector3(0f, 1.3f, 0f), 30f, true, 50f);
-            Fade(0f, 0.8f);
+            Fade(0f, 0.3f);
+            if (stormAmbience != null) StartCoroutine(FadeAudio(stormAmbience, 0.2f, 1f)); // muffled, inside
+            if (insideAmbience != null) { insideAmbience.volume = 0f; insideAmbience.Play(); StartCoroutine(FadeAudio(insideAmbience, 0.7f, 1f)); }
+            if (padSource != null) StartCoroutine(FadeAudio(padSource, 0f, 1.5f));
             float waited = 0f;
-            while (bearer.Busy && waited < 7f) { waited += Time.deltaTime; yield return null; }
-            yield return new WaitForSeconds(0.5f);
+            while (bearer.Busy && waited < 3f) { waited += Time.deltaTime; yield return null; }
 
+            // the floor gives way: rumble, the slabs drop, they fall, the camera watches them go into the dark
             if (sfx != null && collapseClip != null) sfx.PlayOneShot(collapseClip, 1f);
-            for (float t = 0f; t < 1.4f; t += Time.deltaTime) { shake = Mathf.Lerp(0.05f, 0.5f, t / 1.4f); yield return null; }
+            for (float t = 0f; t < 0.9f; t += Time.deltaTime) { shake = Mathf.Lerp(0.05f, 0.5f, t / 0.9f); yield return null; }
             if (collapseDust != null) collapseDust.Play();
             foreach (var p in collapsePieces)
             {
@@ -240,15 +359,106 @@ namespace NasconGJ.Cutscenes
                 p.AddTorque(Random.insideUnitSphere * 2f, ForceMode.VelocityChange);
             }
             bearer.Fall();
+            if (sfx != null && whooshClip != null) sfx.PlayOneShot(whooshClip, 1f);
             CameraTrack(bearer.transform, new Vector3(0f, 1.2f, 0f));
-            for (float t = 0f; t < 1.3f; t += Time.deltaTime) { shake = Mathf.Lerp(0.5f, 0.1f, t / 1.3f); yield return null; }
-            yield return Fade(1f, 0.45f);
+            // the floor cracks open under them: a hard crack, the camera jolts and judders
+            PlayLow(crackleClip, 0.55f, 1f);
+            PlayLow(impactClip, 0.7f, 1f);
+            if (sfx != null && fallClip != null) sfx.PlayOneShot(fallClip, 1f);
+            ComicLook.SetImpact(1f);
+            yield return new WaitForSeconds(0.06f);
+            ComicLook.SetImpact(0f);
+            for (float t = 0f; t < 0.7f; t += Time.deltaTime) { shake = Mathf.Lerp(0.9f, 0.4f, t / 0.7f) * (Random.value < 0.3f ? 1.4f : 1f); yield return null; }
+            // ...and they drop away into the depth as the dark closes in
+            StartCoroutine(FovDive(1.8f));
+            for (float t = 0f; t < 1.8f; t += Time.deltaTime) { shake = Mathf.Lerp(0.4f, 0.05f, t / 1.8f); yield return null; }
+            yield return Fade(1f, 0.8f);
             shake = 0f;
-            yield return new WaitForSeconds(0.5f);
-            if (sfx != null && impactClip != null) sfx.PlayOneShot(impactClip, 1f);
-            if (dread != null) StartCoroutine(FadeAudio(dread, 0f, 1.5f));
-            yield return new WaitForSeconds(2f);
+            foreach (var src in new[] { music, dread, townAmbience, townMurmur, stormAmbience, windAmbience, thunderSource, insideAmbience, padSource }) if (src != null) src.volume = 0f;
+            yield return new WaitForSeconds(1f);                                  // a full second of black and silence
+            if (memoryFall != null) yield return memoryFall.Play();
+            if (sfx != null && cryClip != null) sfx.PlayOneShot(cryClip, 0.75f);  // only a heartbeat in the dark
+            yield return new WaitForSeconds(4.2f);
             Finish();
+        }
+
+        private const string GirlName = "YUNA", BearerName = "REN";
+
+        /// <summary>Cue the long thunder roll from the storm recording (its big crack is ~14 s in).</summary>
+        private void ThunderRoll(float volume)
+        {
+            if (thunderSource == null || thunderSource.clip == null) return;
+            thunderSource.Stop();
+            thunderSource.time = 0f;
+            thunderSource.volume = volume;
+            thunderSource.Play();
+            StartCoroutine(StopAfter(thunderSource, thunderSource.clip.length));
+        }
+
+        private IEnumerator StopAfter(AudioSource s, float seconds)
+        {
+            yield return new WaitForSeconds(seconds - 1.2f);
+            yield return FadeAudio(s, 0f, 1.2f);
+            s.Stop();
+        }
+
+        /// <summary>One-shot played slowed down (heavier, deeper) on its own source.</summary>
+        private void PlayLow(AudioClip clip, float pitch, float volume)
+        {
+            if (lowSource == null || clip == null) return;
+            lowSource.pitch = pitch;
+            lowSource.PlayOneShot(clip, volume);
+        }
+
+        /// <summary>Narrow the lens while falling, so the pit seems to swallow the shot.</summary>
+        private IEnumerator FovDive(float duration)
+        {
+            float from = cam.fieldOfView;
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                cam.fieldOfView = Mathf.Lerp(from, from * 0.55f, Mathf.SmoothStep(0f, 1f, t / duration));
+                yield return null;
+            }
+        }
+
+        private IEnumerator SnapAfter(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            yield return new WaitForEndOfFrame();
+            if (memoryFall != null) memoryFall.Snap(cam);
+        }
+
+        /// <summary>A spoken line as a caption (speaker in gold), held long enough to read, then the next cut.</summary>
+        private IEnumerator Line(string speaker, string text, float extra)
+        {
+            int words = text.Split(' ').Length;
+            float hold = 0.7f + words * 0.26f + extra;
+            AudioClip vo = voiceLines != null && voiceIndex < voiceLines.Length ? voiceLines[voiceIndex] : null;
+            voiceIndex++;
+            if (vo != null && voice != null) { voice.PlayOneShot(vo); hold = vo.length + 0.1f + extra; }
+            ui.Caption(string.IsNullOrEmpty(speaker) ? text : $"<color=#E8C27A>{speaker}</color>   {text}", hold);
+            yield return new WaitForSeconds(hold + 0.35f);
+        }
+
+        /// <summary>A thunderbolt hit: lightning around the Void, two hard impact frames, a crack of thunder, a jolt.</summary>
+        private IEnumerator Thunderbolt()
+        {
+            if (voidApparition != null) voidApparition.Strike();
+            if (sfx != null && thunderClip != null) sfx.PlayOneShot(thunderClip, 1f);
+            if (sfx != null && swishHeavyClip != null) sfx.PlayOneShot(swishHeavyClip, 0.6f);
+            StartCoroutine(Shake(0.6f, 0.35f));
+            ComicLook.SetImpact(1f);
+            yield return new WaitForSeconds(0.07f);
+            ComicLook.SetImpact(0f);
+            yield return new WaitForSeconds(0.06f);
+            ComicLook.SetImpact(1f);
+            yield return new WaitForSeconds(0.05f);
+            ComicLook.SetImpact(0f);
+        }
+
+        private void Cut()
+        {
+            if (sfx != null && whooshClip != null) sfx.PlayOneShot(whooshClip, 0.35f);
         }
 
         private static IEnumerator LookUp(Villager v, Transform target, float delay)
@@ -311,6 +521,7 @@ namespace NasconGJ.Cutscenes
             {
                 if (lightning != null) lightning.intensity = 4f * p;
                 cam.backgroundColor = Color.Lerp(sky, new Color(0.75f, 0.78f, 1f), p * 0.75f);
+                if (p >= 1f) { if (sfx != null && thunderClip != null) sfx.PlayOneShot(thunderClip, 0.65f); StartCoroutine(Shake(0.35f, 0.15f)); }
                 yield return new WaitForSeconds(0.06f);
             }
             for (float t = 0f; t < 0.5f; t += Time.deltaTime)
@@ -448,6 +659,11 @@ namespace NasconGJ.Cutscenes
             RenderSettings.fogColor = a.fog;
             RenderSettings.fogDensity = a.fogDensity;
             Shader.SetGlobalFloat(PaletteReduceId, a.palette);
+            Shader.SetGlobalColor(SkyTopId, a.sky * 0.6f);
+            Shader.SetGlobalColor(SkyHorizonId, Color.Lerp(a.sky, a.fog, 0.5f) * 1.1f);
+            Shader.SetGlobalColor(SkyCloudId, Color.Lerp(a.sky * 0.35f, new Color(1f, 0.97f, 0.92f), a.palette));
+            Shader.SetGlobalColor(SkyGlowId, a.sun * a.sunIntensity * 0.35f);
+            Shader.SetGlobalVector(SkyGlowDirId, -(Quaternion.Euler(a.sunEuler) * Vector3.forward));
             if (outdoorVolume != null) outdoorVolume.weight = a.outdoor;
             if (sun != null)
             {

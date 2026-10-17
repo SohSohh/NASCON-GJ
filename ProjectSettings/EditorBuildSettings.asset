@@ -15,6 +15,9 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/Cutscenes/C01_Prologue.unity
     guid: d58b26754322fc1448769154d6d7269a
   - enabled: 1
+    path: Assets/_Project/Scenes/Cutscenes/C01b_PrologueTown.unity
+    guid: 7ead52d09aa4f65499f5c61399c8bb10
+  - enabled: 1
     path: Assets/_Project/Scenes/Levels/L01_TombEntrance.unity
     guid: 28ae8c047f9d54c41b9ce06c911ee3f7
   - enabled: 1

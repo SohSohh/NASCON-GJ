@@ -30,6 +30,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Dissolve: 0
+    - _FogAmount: 1
     - _Glow: 1
     - _RimPower: 2.4
     - _Wobble: 0

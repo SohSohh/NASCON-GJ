@@ -22,6 +22,7 @@ namespace NasconGJ.Items
 
         public string ItemName => itemName;
         public Vector3 HoldPositionOffset => holdPositionOffset;
+        public Vector3 HoldRotationOffset => holdRotationOffset;
         public bool IsHeld { get; private set; }
         public FlammableItem Flammable { get; private set; }
 

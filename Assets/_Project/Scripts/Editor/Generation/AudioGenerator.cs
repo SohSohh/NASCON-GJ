@@ -18,6 +18,10 @@ namespace NasconGJ.EditorTools.Generation
         public static string PathOf(string name) => $"{Dir}/{name}.wav";
         public static AudioClip Load(string name) => AssetDatabase.LoadAssetAtPath<AudioClip>(PathOf(name));
 
+        /// <summary>A real recording from Audio/CC0 (see CREDITS.md), falling back to the synthesized clip if it is missing.</summary>
+        public static AudioClip Real(string cc0File, string synthFallback) =>
+            AssetDatabase.LoadAssetAtPath<AudioClip>($"{GenUtil.Root}/Audio/CC0/{cc0File}") ?? Load(synthFallback);
+
         public static void GenerateAll()
         {
             GenUtil.EnsureFolder(Dir);
@@ -39,6 +43,12 @@ namespace NasconGJ.EditorTools.Generation
             Write("SFX_Thunder", Thunder(rng));
             Write("SFX_Collapse", Collapse(rng));
             Write("SFX_Impact", Impact(rng));
+            Write("AMB_TownBirds", Loop(Birds(rng, 16f), 1f));
+            Write("AMB_TownMurmur", Loop(Murmur(rng, 14f), 1.5f));
+            Write("SFX_Whoosh", Whoosh(rng));
+            Write("SFX_Riser", Riser(rng));
+            Write("SFX_Boom", BigBoom(rng));
+            Write("SFX_Ring", Ring());
             AssetDatabase.Refresh();
             ConfigureImports();
         }
@@ -160,6 +170,132 @@ namespace NasconGJ.EditorTools.Generation
                 o[i] = thump + grit;
             }
             return Normalize(o, 0.9f);
+        }
+
+        /// <summary>Bright little chirps and trills scattered over a soft breeze.</summary>
+        private static float[] Birds(System.Random rng, float seconds)
+        {
+            int n = (int)(seconds * Rate);
+            var o = new float[n];
+            var air = new Biquad(1800f, 0.4f);
+            for (int i = 0; i < n; i++) o[i] = air.Process(Rand(rng)) * 0.03f;
+            int calls = (int)(seconds * 2.2f);
+            for (int c = 0; c < calls; c++)
+            {
+                int start = (int)(rng.NextDouble() * (n - Rate));
+                float baseF = 2600f + (float)rng.NextDouble() * 2200f;
+                int notes = 1 + rng.Next(0, 4);
+                float gain = 0.25f + (float)rng.NextDouble() * 0.5f;
+                for (int k = 0; k < notes; k++)
+                {
+                    int off = start + (int)(k * (0.07f + rng.NextDouble() * 0.06f) * Rate);
+                    float len = 0.05f + (float)rng.NextDouble() * 0.08f;
+                    float sweep = ((float)rng.NextDouble() - 0.3f) * 2400f;
+                    double ph = 0;
+                    for (int i = 0; i < (int)(len * Rate) && off + i < n; i++)
+                    {
+                        float t = i / (float)Rate;
+                        float f = baseF + sweep * (t / len) + Mathf.Sin(t * 180f) * 120f;
+                        ph += 2 * Mathf.PI * f / Rate;
+                        float env = Mathf.Sin(Mathf.PI * t / len);
+                        o[off + i] += (float)System.Math.Sin(ph) * env * gain;
+                    }
+                }
+            }
+            return Normalize(o, 0.35f);
+        }
+
+        /// <summary>Distant voices: band-limited babble with syllable-like gating.</summary>
+        private static float[] Murmur(System.Random rng, float seconds)
+        {
+            int n = (int)(seconds * Rate);
+            var o = new float[n];
+            var voices = new Biquad[5];
+            float[] rates = new float[5], phases = new float[5];
+            for (int v = 0; v < voices.Length; v++)
+            {
+                voices[v] = new Biquad(350f + v * 180f, 3f);
+                rates[v] = 3f + (float)rng.NextDouble() * 3f;
+                phases[v] = (float)rng.NextDouble() * 10f;
+            }
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Rate;
+                float sum = 0f;
+                for (int v = 0; v < voices.Length; v++)
+                {
+                    voices[v].SetFreq(300f + v * 170f + Mathf.Sin(t * 2.3f + phases[v]) * 90f);
+                    float syll = Mathf.Max(0f, Mathf.Sin(t * rates[v] * Mathf.PI * 2f + phases[v])) * (0.5f + 0.5f * Mathf.Sin(t * 0.4f + phases[v]));
+                    sum += voices[v].Process(Rand(rng)) * syll;
+                }
+                o[i] = sum;
+            }
+            return Normalize(o, 0.3f);
+        }
+
+        private static float[] Whoosh(System.Random rng)
+        {
+            int n = (int)(0.9f * Rate);
+            var o = new float[n];
+            var bp = new Biquad(400f, 1.5f);
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)n;
+                bp.SetFreq(300f + 2200f * Mathf.Sin(t * Mathf.PI));
+                o[i] = bp.Process(Rand(rng)) * Mathf.Sin(t * Mathf.PI) * Mathf.Sin(t * Mathf.PI);
+            }
+            return Normalize(o, 0.7f);
+        }
+
+        /// <summary>A swelling, rising dread (pitch and noise climbing for ~4 s, then cut).</summary>
+        private static float[] Riser(System.Random rng)
+        {
+            int n = (int)(4.2f * Rate);
+            var o = new float[n];
+            var bp = new Biquad(200f, 2f);
+            double ph = 0, ph2 = 0;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)n;
+                float f = 60f + 340f * t * t;
+                ph += 2 * Mathf.PI * f / Rate;
+                ph2 += 2 * Mathf.PI * f * 1.51f / Rate;
+                bp.SetFreq(200f + 3000f * t * t);
+                float env = t * t * (t < 0.97f ? 1f : (1f - t) / 0.03f);
+                o[i] = ((float)System.Math.Sin(ph) * 0.5f + (float)System.Math.Sin(ph2) * 0.3f + bp.Process(Rand(rng)) * 0.8f) * env;
+            }
+            return Normalize(o, 0.8f);
+        }
+
+        /// <summary>A huge sub-bass impact with a cracked top end.</summary>
+        private static float[] BigBoom(System.Random rng)
+        {
+            int n = (int)(5f * Rate);
+            var o = new float[n];
+            var lp = new OnePole(300f);
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Rate;
+                float sub = Mathf.Sin(2f * Mathf.PI * (48f - 18f * Mathf.Min(1f, t * 2f)) * t) * Mathf.Exp(-t * 0.9f);
+                float crack = Rand(rng) * Mathf.Exp(-t * 18f);
+                float rumble = lp.Process(Rand(rng)) * 2.5f * Mathf.Exp(-t * 0.7f);
+                o[i] = sub * 1.2f + crack * 0.8f + rumble;
+            }
+            return Normalize(o, 0.95f);
+        }
+
+        /// <summary>The high ear-ring after an explosion.</summary>
+        private static float[] Ring()
+        {
+            int n = (int)(5f * Rate);
+            var o = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Rate;
+                float env = Mathf.Min(1f, t * 3f) * Mathf.Exp(-t * 0.5f);
+                o[i] = (Mathf.Sin(2f * Mathf.PI * 3950f * t) + Mathf.Sin(2f * Mathf.PI * 4010f * t) * 0.6f) * env;
+            }
+            return Normalize(o, 0.18f);
         }
 
         private static float[] Drip(System.Random rng, float freq)

@@ -376,9 +376,22 @@ namespace NasconGJ.EditorTools.Generation
             // one quiet line in the lower bar area
             var captionRt = MakeRect("Caption", root, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 168), new Vector2(1500, 70));
             var captionGroup = captionRt.gameObject.AddComponent<CanvasGroup>();
-            var caption = MakeText(captionRt, "", italic, 40, new Color(1f, 0.9f, 0.78f, 1f), TextAlignmentOptions.Center);
-            caption.outlineWidth = 0.15f;
-            caption.outlineColor = new Color32(0, 0, 0, 200);
+            // soft dark pool behind the line, so it reads over a bright shot
+            var backing = new GameObject("Backing", typeof(RectTransform), typeof(Image));
+            backing.transform.SetParent(captionRt, false);
+            var brt = (RectTransform)backing.transform;
+            brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
+            brt.sizeDelta = new Vector2(1640f, 88f);
+            var braw = backing.GetComponent<Image>();
+            braw.color = new Color(0f, 0f, 0f, 0.62f);
+            braw.raycastTarget = false;
+            var captionTextRt = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
+            captionTextRt.SetParent(captionRt, false);
+            captionTextRt.anchorMin = Vector2.zero; captionTextRt.anchorMax = Vector2.one;
+            captionTextRt.offsetMin = captionTextRt.offsetMax = Vector2.zero;
+            var caption = MakeText(captionTextRt, "", body, 44, new Color(1f, 0.95f, 0.86f, 1f), TextAlignmentOptions.Center);
+            caption.outlineWidth = 0.22f;
+            caption.outlineColor = new Color32(0, 0, 0, 235);
 
             // title card
             var titleRt = MakeRect("Title", root, Center, Center, new Vector2(0, 20), new Vector2(1600, 180));

@@ -2595,7 +2595,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 46c15f07f70994743bb53b7ab68b4ec9, type: 3}
+  m_Resource: {fileID: 8300000, guid: 38f504e4a808fd442bd2ca27f4fb7380, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -2695,7 +2695,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NasconGJ.Audio.FlameAudio
   flame: {fileID: 0}
   volume: 0.68
-  igniteClip: {fileID: 8300000, guid: 61b51f74196a31f4fa0c3024b8a6ad2f, type: 3}
+  igniteClip: {fileID: 8300000, guid: e17b8bcd2b255bf46803f4a1b65301a3, type: 3}
 --- !u!1 &9054318418872664159
 GameObject:
   m_ObjectHideFlags: 0

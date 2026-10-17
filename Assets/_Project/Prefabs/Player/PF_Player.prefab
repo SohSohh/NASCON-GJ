@@ -339,10 +339,9 @@ MonoBehaviour:
   bobAmplitude: 0.035
   footstepSource: {fileID: 5113686836825369811}
   footstepClips:
-  - {fileID: 8300000, guid: cd5f9bb11237bc94a9704cf15026b3a4, type: 3}
-  - {fileID: 8300000, guid: 9004378eaa0683944b40fefdd9c69dd8, type: 3}
-  - {fileID: 8300000, guid: eb26597a5b81bf642921cd69e0e404e7, type: 3}
-  - {fileID: 8300000, guid: b64f0485018209047ac37042c55e9298, type: 3}
+  - {fileID: 8300000, guid: 08877238bd90f5a4b9cd2cf9b97d0d7e, type: 3}
+  - {fileID: 8300000, guid: bf7e262404142534da6c267373c692bb, type: 3}
+  - {fileID: 8300000, guid: e27bd57fab0e9ca4294fb60c553f8908, type: 3}
 --- !u!114 &4375709367465633110
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -440,6 +439,9 @@ MonoBehaviour:
   firstPersonMaterial: {fileID: 2100000, guid: 2565d740501794b49afde72d08c2a8bf, type: 2}
   palmDistance: 0.07
   gripHeight: 0.12
+  gripAlign: 0.85
+  wallClearance: 0.14
+  tuckedOffset: {x: 0.07, y: -0.2, z: -0.2}
   rightGripEuler: {x: 0, y: -90, z: -90}
   rightGripOffset: {x: 0, y: -0.02, z: -0.05}
   leftCoverEuler: {x: 80, y: 0, z: 90}
@@ -657,7 +659,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: d949742bd750df741a8ddfffd6fd28f6, type: 3}
+  m_Resource: {fileID: 8300000, guid: 621e5152f7b0fb748b1747309f6af876, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1

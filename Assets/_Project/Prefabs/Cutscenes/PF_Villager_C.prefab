@@ -110,4 +110,5 @@ MonoBehaviour:
   strollOffset: {x: 0, y: 0, z: 0}
   strollSpeed: 1.05
   phase: 0
+  talkTo: {fileID: 0}
   smokeMaterial: {fileID: 0}

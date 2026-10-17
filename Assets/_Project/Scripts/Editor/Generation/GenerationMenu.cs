@@ -14,6 +14,7 @@ namespace NasconGJ.EditorTools.Generation
         public static void TexturesAndMaterials()
         {
             TextureGenerator.GenerateAll();
+            InkArtGenerator.GenerateAll();
             AudioGenerator.GenerateAll();
             FontLibrary.GenerateAll();
             MaterialLibrary.GenerateAll();

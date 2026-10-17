@@ -11,7 +11,8 @@ namespace NasconGJ.Core
         public const string MainMenu = "MainMenu";
 
         // Cutscenes
-        public const string Prologue = "C01_Prologue";
+        public const string Prologue = "C01_Prologue";          // 2D puppet backstory (the elder's tale)
+        public const string PrologueTown = "C01b_PrologueTown"; // 3D present day: rooftop, the Void, the survivor, the fall
         public const string Ending = "C02_Ending";
 
         // Levels (played in this order)
@@ -27,6 +28,7 @@ namespace NasconGJ.Core
         {
             MainMenu,
             Prologue,
+            PrologueTown,
             TombEntrance,
             NarrowPath,
             MultiStory,
