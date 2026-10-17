@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b79b0922cb2a5b74eaf925b0daabddbd, type: 3}
+  m_Name: SO_Dialogue_L01_Shadows
+  m_EditorClassIdentifier: Assembly-CSharp::NasconGJ.Guiding.DialogueData
+  id: l01_shadows
+  speaker: THE GUIDING LIGHT
+  lines:
+  - These were the townsfolk.
+  - They can't touch the light. Stay in it.
+  charactersPerSecond: 38
