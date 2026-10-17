@@ -321,7 +321,7 @@ MonoBehaviour:
   blockedByCastShadows: 0
   occluderMask:
     serializedVersion: 2
-    m_Bits: 4294966587
+    m_Bits: 3379
   recoilHold: 0.7
   smoke: {fileID: 5128039585897415033}
   whisper: {fileID: 7170470632708229283}
