@@ -36,6 +36,11 @@ Shader "NASCON/StylizedLit"
         _RimColor("Rim Color", Color) = (0.32, 0.18, 0.42, 1)
         _RimStrength("Rim Strength", Range(0, 1)) = 0.12
 
+        [Header(Interaction Outline)]
+        _InteractionOutline("Interaction Outline", Float) = 0
+        _OutlineWidth("Outline Width (pixels)", Range(1, 8)) = 10
+        [HDR] _OutlineColor("Outline Color", Color) = (4, 0, 0, 1)
+
         [Header(Emission)]
         [HDR] _EmissionColor("Emission", Color) = (0, 0, 0, 0)
 
@@ -71,6 +76,9 @@ Shader "NASCON/StylizedLit"
             half4 _RimColor;
             half _RimStrength;
             half _InteractionHighlight;
+            half _InteractionOutline;
+            half _OutlineWidth;
+            half4 _OutlineColor;
             half4 _EmissionColor;
             half _MaxLight;
             float4 _CamClip;
@@ -88,6 +96,71 @@ Shader "NASCON/StylizedLit"
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
         TEXTURE2D(_GritTex); SAMPLER(sampler_GritTex);
         ENDHLSL
+
+        Pass
+        {
+            Name "InteractionOutline"
+            Tags { "LightMode" = "SRPDefaultUnlit" }
+            Cull Front
+            ZWrite Off
+            ZTest LEqual
+            ColorMask RGB
+            Stencil
+            {
+                Ref 128
+                ReadMask 128
+                WriteMask 128
+                Comp Always
+                Pass Replace
+                Fail Keep
+                ZFail Keep
+            }
+
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex OutlineVert
+            #pragma fragment OutlineFrag
+            #pragma multi_compile_instancing
+
+            struct OutlineAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct OutlineVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+
+            OutlineVaryings OutlineVert(OutlineAttributes input)
+            {
+                OutlineVaryings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+
+                float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.positionCS = TransformWorldToHClip(positionWS);
+                float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
+                float2 normalCS = mul((float2x2)UNITY_MATRIX_P, normalVS.xy);
+                float normalLengthSq = dot(normalCS, normalCS);
+                if (normalLengthSq > 1e-6)
+                    output.positionCS.xy += normalCS * rsqrt(normalLengthSq) *
+                        (2.0 * _OutlineWidth / _ScreenParams.xy) * output.positionCS.w;
+                return output;
+            }
+
+            half4 OutlineFrag(OutlineVaryings input) : SV_Target
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                clip(_InteractionOutline - 0.5);
+                return half4(_OutlineColor.rgb, 1);
+            }
+            ENDHLSL
+        }
 
         // ------------------------------------------------------------------
         Pass
@@ -242,9 +315,9 @@ Shader "NASCON/StylizedLit"
                 half rim = pow(1.0h - saturate(dot(N, V)), 4.0h) * _RimStrength;
 
                 half3 color = ambient + lit + specular * _SpecStrength + _RimColor.rgb * rim + _EmissionColor.rgb;
-                // Broad, light-independent edge survives palette quantization, without lighting the room.
-                half edge = pow(1.0h - saturate(dot(N, V)), 2.0h);
-                color += half3(0.65h, 0.9h, 1.0h) * _InteractionHighlight * (0.22h + edge * 1.8h);
+                // A narrow, light-independent contour stays visible on dark and bright surfaces.
+                half edge = pow(1.0h - saturate(dot(N, V)), 8.0h);
+                color += half3(1.0h, 0.62h, 0.18h) * _InteractionHighlight * (0.12h + edge * 5.0h);
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1);
             }

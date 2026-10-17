@@ -25,7 +25,19 @@ namespace NasconGJ.EditorTools.Generation
             Create("EBGaramond");
             Create("EBGaramond-Italic");
             CreateGlowPreset();
+            ApplyTextOutline(Title.material);
+            ApplyTextOutline(Body.material);
+            ApplyTextOutline(Italic.material);
+            ApplyTextOutline(TitleGlow);
             AssetDatabase.SaveAssets();
+        }
+
+        private static void ApplyTextOutline(Material material)
+        {
+            if (material == null) return;
+            material.SetFloat("_OutlineWidth", 0.15f);
+            material.SetColor("_OutlineColor", new Color(0f, 0f, 0f, 0.9f));
+            EditorUtility.SetDirty(material);
         }
 
         private static void Create(string fileName)
