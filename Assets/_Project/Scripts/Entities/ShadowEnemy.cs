@@ -117,7 +117,11 @@ namespace NasconGJ.Entities
             visualUp = ComputeUp(normal, Vector3.zero);
             herdDestination = pos;
             if (skin != null) skin.SetSurfaceMask(surfaceMask);
-            if (whisper != null) whisper.volume = 0f;
+            if (whisper != null)
+            {
+                whisper.volume = 0f;
+                whisper.Stop();
+            }
             FindPlayer();
         }
 
@@ -665,7 +669,8 @@ namespace NasconGJ.Entities
             var cam = Camera.main;
             if (skin != null) skin.Renderer.enabled = false;
             if (body != null) body.SetHidden(true);
-            if (lungeClip != null && cam != null) AudioSource.PlayClipAtPoint(lungeClip, cam.transform.position, 1f);
+            if (lungeClip != null && cam != null && LightSourceRegistry.IsPointLit(Center))
+                AudioSource.PlayClipAtPoint(lungeClip, cam.transform.position, 1f);
             if (cam != null && skin != null)
                 ShadowLunge.Play(skin.Renderer.sharedMaterial, ShadowSheet.CreatureFrame(ShadowSheet.Attack + 1), cam.transform,
                     () => { if (death != null) death.Kill("Taken by a shadow."); });
@@ -755,6 +760,16 @@ namespace NasconGJ.Entities
 
             if (whisper != null)
             {
+                // A shadow's whisper is audible only while its body is inside a lit source's radius.
+                if (!LightSourceRegistry.IsPointLit(Center))
+                {
+                    whisperVolume = 0f;
+                    whisper.volume = 0f;
+                    if (whisper.isPlaying) whisper.Stop();
+                    whisper.transform.position = Center;
+                    return;
+                }
+
                 float target = Current switch
                 {
                     State.Dormant => 0.05f,
@@ -771,6 +786,8 @@ namespace NasconGJ.Entities
                 whisper.volume = whisperVolume;
                 whisper.pitch = Current == State.Frozen ? 0.75f : 1f;
                 whisper.transform.position = Center;
+                if (whisperVolume > 0.001f && !whisper.isPlaying) whisper.Play();
+                else if (whisperVolume <= 0.001f && whisper.isPlaying) whisper.Stop();
             }
         }
 
