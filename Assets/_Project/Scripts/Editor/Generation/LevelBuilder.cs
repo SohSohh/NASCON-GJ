@@ -254,7 +254,7 @@ namespace NasconGJ.EditorTools.Generation
             Exit(s, new Vector3(8f, 1.5f, 60.3f), new Vector3(3.6f, 3f, 1f));
 
             // a fresh, full torch just inside the hall
-            return Place(G.TorchPath, s.Items, new Vector3(1.5f, 0.06f, 33.4f), 0, new Vector3(0, 40f, 90f));
+            return Place(G.TorchPath, s.Items, new Vector3(0f, 0.06f, 34f), 0, new Vector3(0, 40f, 90f));
         }
 
         // =====================================================================

@@ -19,12 +19,14 @@ namespace NasconGJ.UI
         [SerializeField] private AudioClip chimeClip;
 
         private Coroutine routine;
+        private Vector2 restingPosition;
         public string Current { get; private set; } = "";
 
         private void Awake()
         {
             Instance = this;
             group.alpha = 0f;
+            restingPosition = root.anchoredPosition;
         }
 
         private void OnDestroy()
@@ -48,9 +50,11 @@ namespace NasconGJ.UI
                 yield return null;
             }
             text.text = objective;
+            group.alpha = 0f;
+            root.anchoredPosition = restingPosition;
             if (string.IsNullOrEmpty(objective)) yield break;
             if (chimeSource != null && chimeClip != null) chimeSource.PlayOneShot(chimeClip, 0.25f);
-            Vector2 basePos = root.anchoredPosition;
+            Vector2 basePos = restingPosition;
             for (float t = 0f; t < 0.8f; t += Time.unscaledDeltaTime)
             {
                 float k = Mathf.SmoothStep(0f, 1f, t / 0.8f);

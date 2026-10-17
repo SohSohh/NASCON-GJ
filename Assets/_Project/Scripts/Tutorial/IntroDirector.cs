@@ -49,87 +49,120 @@ namespace NasconGJ.Tutorial
             inventory = player.GetComponent<PlayerInventory>();
             wake = player.GetComponent<WakeUpSequence>();
             guide = FindAnyObjectByType<GuidingLight>();
-            HoldGuide(true); // it waits beside you until you have the torch
+            if (guide != null) guide.TutorialControlsSpeech = true;
+            HoldGuide(true);
             HUDController.SuppressLowFuelWarning = true;
-
+            Objective("");
             SetGate(pitGate, true);
             SetGate(narrowsGate, true);
             Protect(droppedTorch, 0.25f);
 
-            // ---------- 1. take the torch
             while (wake != null && !wake.Finished) yield return null;
             yield return new WaitForSeconds(0.6f);
-            // let the guiding light finish its first words before any UI appears
-            for (float t = 0f; guide != null && guide.IsTalking && t < 12f; t += Time.deltaTime) yield return null;
+            yield return Narrate(0);
             Glint(droppedTorch, true);
-            Objective("Your torch fell beside you");
-            Hint("E", "Pick up", () => Holding(droppedTorch));
-            while (!Holding(droppedTorch)) yield return null;
+            yield return Lesson("Take the torch beside you", "E", "Pick up the torch", () => Holding(droppedTorch));
             Glint(droppedTorch, false);
             SetGate(pitGate, false);
             HoldGuide(false);
 
-            // ---------- 2. crawl
-            Objective("Crawl under the fallen slab");
-            Hint("C", "Hold to crouch", () => narrowsStart.EverEntered);
-            while (!narrowsStart.EverEntered) yield return null;
-
-            // ---------- 3. the torch fails: pass the flame
-            Objective("Follow the light");
+            Objective("Follow the guiding light");
+            while (!crawlStart.EverEntered) yield return null;
+            yield return Lesson("Crawl under the fallen slab", "C", "Hold to crouch", () => narrowsStart.EverEntered);
+            Objective("Follow the guiding light");
             while (!stickApproach.EverEntered) yield return null;
-            HoldGuide(true); // and waits at the stick until you carry its flame
             Flame(droppedTorch)?.SetFuel(0.22f);
             Protect(droppedTorch, 0.12f);
             Glint(stick, true);
-            Objective("Your torch is dying. Light the stick");
-            Hint("F", "Look at the stick, hold to pass the flame", () => Flame(stick) != null && Flame(stick).IsBurning);
-            while (Flame(stick) == null || !Flame(stick).IsBurning) yield return null;
-
-            Protect(droppedTorch, 0f);
-            Flame(droppedTorch)?.SetFuel(0.07f); // spent: it gutters out a few seconds later
+            yield return Narrate(1);
+            yield return Lesson("Light the stick before your torch goes out", "F", "Look at the stick and hold to light it", () => Flame(stick) != null && Flame(stick).IsBurning);
             Protect(stick, 0.35f);
-            Objective("Take the burning stick");
-            Hint("E", "Pick up", () => Holding(stick));
-            while (!Holding(stick)) yield return null;
+            Protect(droppedTorch, 0f);
+            Flame(droppedTorch)?.SetFuel(0.07f);
+            yield return Lesson("Take the burning stick", "E", "Pick up the stick", () => Holding(stick));
             Glint(stick, false);
             SetGate(narrowsGate, false);
             HoldGuide(false);
 
-            // ---------- 4. the draft: shield it
-            Objective("Follow the light");
+            Objective("Follow the guiding light");
             while (!draftApproach.EverEntered) yield return null;
-            Objective("Wind ahead. Shield your flame");
-            Hint("RMB", "Hold to cover the flame", () => draftExit.EverEntered);
-            while (!draftExit.EverEntered) yield return null;
+            yield return Narrate(2);
+            yield return Lesson("Shield the flame through the wind", "RMB", "Hold to cover the flame", () => draftExit.EverEntered);
+            HoldGuide(false);
 
-            // ---------- 5. the hall: real stakes from here
-            Objective("Follow the light");
+            Objective("Follow the guiding light into the hall");
             while (!hallEntrance.EverEntered) yield return null;
+            yield return Narrate(3);
             Glint(freshTorch, true);
-            Objective("Take the fresh torch by the entrance");
-            Hint("E", "Pick up", () => Holding(freshTorch));
-            float waited = 0f;
-            while (!Holding(freshTorch) && waited < 25f) { waited += Time.deltaTime; yield return null; }
+            Protect(freshTorch, 0.35f);
+            yield return Lesson("Take the fresh torch by the entrance", "E", "Pick up the fresh torch", () => Holding(freshTorch));
             Glint(freshTorch, false);
-            Protect(stick, 0f);
-            HUDController.SuppressLowFuelWarning = false;
-
+            HoldGuide(false);
             Objective("Cross the hall. Stay in the light");
-            Hint("F", "Light a brazier to push shadows back", null, 6f);
-            yield return new WaitForSeconds(7f);
-            if (inventory.GetSlot(0) != null && inventory.GetSlot(1) != null)
+            yield return TimedHint("F", "Light a brazier to keep shadows away", 5f);
+            if (!exitApproach.EverEntered && inventory.GetSlot(0) != null && inventory.GetSlot(1) != null)
             {
-                Hint("1 / 2", "Switch hands", null, 4f);
-                yield return new WaitForSeconds(5f);
-                Hint("G", "Set a light down", null, 4f);
+                yield return TimedHint("1 / 2", "Switch your active hand", 3f);
+                if (!exitApproach.EverEntered) yield return TimedHint("G", "Set a light down", 3f);
             }
-
+            Protect(stick, 0f);
+            Protect(freshTorch, 0f);
+            HUDController.SuppressLowFuelWarning = false;
             while (!exitApproach.EverEntered) yield return null;
+            yield return Narrate(4);
             Objective("Reach the light");
+            HoldGuide(false);
+            if (guide != null) guide.TutorialControlsSpeech = false;
         }
 
-        private void OnDestroy() => HUDController.SuppressLowFuelWarning = false;
+        private IEnumerator ClearHint()
+        {
+            if (HintUI.Instance != null)
+            {
+                HintUI.Instance.Hide();
+                while (HintUI.Instance != null && HintUI.Instance.IsShowing) yield return null;
+            }
+            yield return new WaitForSeconds(0.35f);
+        }
 
+        private IEnumerator Narrate(int stop)
+        {
+            yield return ClearHint();
+            Objective("");
+            // Let the previous objective fade away before introducing new dialogue.
+            yield return new WaitForSeconds(0.4f);
+            if (guide != null) yield return guide.SpeakTutorialStop(stop);
+            yield return new WaitForSeconds(0.4f);
+        }
+
+        private IEnumerator Lesson(string objective, string keys, string instruction, Func<bool> done)
+        {
+            if (done()) yield break; // Do not replay instructions for an action already completed.
+            Objective(objective);
+            yield return new WaitForSeconds(0.45f);
+            if (!done()) Hint(keys, instruction, done, 2f);
+            while (!done()) yield return null;
+            yield return ClearHint();
+        }
+
+        private IEnumerator TimedHint(string keys, string text, float duration)
+        {
+            Hint(keys, text, null, duration);
+            // Include the fade-in; exit immediately if the player has reached the next beat.
+            float elapsed = 0f;
+            while (elapsed < duration + 0.8f && !exitApproach.EverEntered)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            yield return ClearHint();
+        }
+
+        private void OnDestroy()
+        {
+            HUDController.SuppressLowFuelWarning = false;
+            if (guide != null) { guide.TutorialControlsSpeech = false; guide.Hold = false; }
+        }
         private void HoldGuide(bool hold)
         {
             if (guide != null) guide.Hold = hold;
