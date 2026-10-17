@@ -87,9 +87,14 @@ namespace NasconGJ.Entities
 
         /// <summary>Lay the body out on the surface. <paramref name="target"/> is what the reaching arm goes for.</summary>
         public void Pose(Vector3 basePoint, Vector3 normal, Vector3 up, float height, float facing, ShadowEnemy.State state,
-            Vector3 target, float glowAmount, float dissolve, float dt)
+            Vector3 target, float glowAmount, float dissolve, float dt, bool isResumeWarning = false)
         {
             if (globs == null || hidden) return;
+
+            bool isFrozen = state == ShadowEnemy.State.Frozen;
+            if (isFrozen && !isResumeWarning) dt = 0f; // lock body rigidly in place
+            else if (isFrozen && isResumeWarning) dt *= 0.35f; // subtle resume warning motion
+
             time += dt;
             if (normal.y > 0.65f)
             {
@@ -103,12 +108,15 @@ namespace NasconGJ.Entities
             Vector3 right = Vector3.Cross(normal, up) * facing;
             Quaternion rot = Quaternion.LookRotation(normal, up);
 
-            bool hunting = state == ShadowEnemy.State.Stalk || state == ShadowEnemy.State.Windup;
-            bool burning = state == ShadowEnemy.State.Recoil;
-            swell = Mathf.MoveTowards(swell, state == ShadowEnemy.State.Windup ? 1.18f : burning ? 0.8f : 1f, dt * 1.5f);
-            reach = Mathf.MoveTowards(reach, hunting ? 1f : 0f, dt * 2.2f);
-            float jitterSpeed = burning ? 9f : hunting ? 1.6f : 0.7f;
-            float jitter = burning ? 0.035f : 0.05f;
+            bool hunting = state == ShadowEnemy.State.Approach || state == ShadowEnemy.State.Drain || state == ShadowEnemy.State.Herd || state == ShadowEnemy.State.Windup;
+            bool draining = state == ShadowEnemy.State.Drain;
+            bool dormant = state == ShadowEnemy.State.Dormant;
+
+            float targetSwell = state == ShadowEnemy.State.Windup ? 1.22f : draining ? 1.15f : isFrozen ? 0.95f : dormant ? 0.9f : 1f;
+            swell = Mathf.MoveTowards(swell, targetSwell, (isFrozen ? 0f : dt) * 1.5f);
+            reach = Mathf.MoveTowards(reach, hunting ? 1f : 0f, (isFrozen ? 0f : dt) * 2.2f);
+            float jitterSpeed = isFrozen ? 0f : dormant ? 0.3f : hunting ? 1.8f : 0.7f;
+            float jitter = isFrozen ? 0f : dormant ? 0.02f : 0.05f;
 
             // where the reaching hand wants to be, in the body's surface coordinates
             Vector3 toTarget = Vector3.ProjectOnPlane(target - basePoint, normal);
@@ -128,13 +136,15 @@ namespace NasconGJ.Entities
                     p = Vector2.Lerp(p, Vector2.Lerp(new Vector2(0.13f, 0.65f), reachGoal, along / 3f), reach);
                 }
                 if (limb == 2) p.y += Mathf.Sin(time * 0.9f + ph) * 0.03f;  // back arm drags and sways
-                if (burning) p = Vector2.Lerp(p, new Vector2(0.02f, 0.42f), 0.35f); // balls up away from the light
 
-                // each blob wanders on its own: the silhouette is never quite still
-                p.x += (Mathf.PerlinNoise(time * jitterSpeed * 0.5f + ph, 0.3f) - 0.5f) * jitter * 2f;
-                p.y += (Mathf.PerlinNoise(0.7f, time * jitterSpeed * 0.5f + ph) - 0.5f) * jitter * 2f;
-                float size = r * swell * (1f + Mathf.Sin(time * (1.1f + i * 0.07f) + ph) * 0.18f);
-                if (limb == 4) size *= 1f + Mathf.Sin(time * 0.6f + ph) * 0.12f; // the pool breathes
+                // each blob wanders on its own: the silhouette is never quite still (unless frozen)
+                if (!isFrozen)
+                {
+                    p.x += (Mathf.PerlinNoise(time * jitterSpeed * 0.5f + ph, 0.3f) - 0.5f) * jitter * 2f;
+                    p.y += (Mathf.PerlinNoise(0.7f, time * jitterSpeed * 0.5f + ph) - 0.5f) * jitter * 2f;
+                }
+                float size = r * swell * (1f + Mathf.Sin(time * (1.1f + i * 0.07f) + ph) * (isFrozen ? 0f : 0.18f));
+                if (limb == 4) size *= 1f + Mathf.Sin(time * 0.6f + ph) * (isFrozen ? 0f : 0.12f); // the pool breathes
 
                 float d = size * 2f * height;
                 var t = globs[i];
@@ -145,13 +155,18 @@ namespace NasconGJ.Entities
 
             // eyes on the head blob, toward the viewer side of the wall
             Vector3 head = globs[9].position;
-            float eyeSize = height * (state == ShadowEnemy.State.Windup ? 0.03f : 0.022f) * (0.85f + 0.15f * Mathf.PerlinNoise(time * 3f, 1f));
+            float baseEye = state == ShadowEnemy.State.Windup ? 0.03f : dormant ? 0.015f : 0.022f;
+            if (isFrozen && !isResumeWarning) baseEye *= 0.35f; // eyes dim when frozen
+            else if (isFrozen && isResumeWarning) baseEye *= 0.85f; // eyes re-ignite during resume warning
+
+            float eyeSize = height * baseEye * (0.85f + 0.15f * Mathf.PerlinNoise(time * 3f, 1f));
             eyeL.position = head + right * (height * 0.012f) + up * (height * 0.004f) + normal * (height * 0.05f);
             eyeR.position = head + right * (height * 0.045f) + up * (height * 0.006f) + normal * (height * 0.045f);
             eyeL.localScale = eyeR.localScale = new Vector3(eyeSize, eyeSize * 0.55f, eyeSize * 0.5f);
             eyeL.rotation = eyeR.rotation = rot;
 
-            glob.SetFloat(GlowId, glowAmount);
+            float finalGlow = isFrozen && !isResumeWarning ? glowAmount * 0.25f : state == ShadowEnemy.State.Herd ? glowAmount * 1.35f : glowAmount;
+            glob.SetFloat(GlowId, finalGlow);
             glob.SetFloat(DissolveId, dissolve);
             if (eye != glob) eye.SetFloat(DissolveId, dissolve);
 
@@ -161,7 +176,7 @@ namespace NasconGJ.Entities
                 var shape = drips.shape;
                 shape.scale = new Vector3(height * 0.45f, height * 0.6f, 0.1f);
                 var em = drips.emission;
-                em.rateOverTime = burning ? 30f : hunting ? 9f : 4f;
+                em.rateOverTime = isFrozen ? (isResumeWarning ? 2f : 0f) : draining ? 14f : hunting ? 8f : dormant ? 1f : 4f;
             }
         }
 

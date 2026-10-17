@@ -48,7 +48,7 @@ namespace NasconGJ.Audio
                 foreach (var s in shadows)
                 {
                     if (s == null) continue;
-                    bool hunting = s.Current == ShadowEnemy.State.Stalk || s.Current == ShadowEnemy.State.Windup || s.Current == ShadowEnemy.State.Lunge;
+                    bool hunting = s.Current == ShadowEnemy.State.Approach || s.Current == ShadowEnemy.State.Drain || s.Current == ShadowEnemy.State.Herd || s.Current == ShadowEnemy.State.Windup || s.Current == ShadowEnemy.State.Lunge;
                     float closeness = 1f - Mathf.Clamp01(Vector3.Distance(s.SurfacePoint, listener.position) / threatRange);
                     target = Mathf.Max(target, closeness * (hunting ? 1f : 0.35f));
                 }

@@ -258,6 +258,7 @@ GameObject:
   - component: {fileID: 7890725924937745517}
   - component: {fileID: 4392168833494263329}
   - component: {fileID: 8033287389710130175}
+  - component: {fileID: 3633798703348678684}
   m_Layer: 10
   m_Name: PF_Brazier_Lit
   m_TagString: Flammable
@@ -387,8 +388,23 @@ MonoBehaviour:
   flickerAmount: 0.18
   flickerSpeed: 8
   lowFuelThreshold: 0.25
-  gameplayRadiusFactor: 0.65
   coveredIntensity: 0.12
+--- !u!114 &3633798703348678684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1198422270549691465}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 450d11af234f2a8498bcc662b95f9eaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NasconGJ.Entities.HerdTarget
+  type: 1
+  priority: 1
+  activeRadius: 10
+  isActive: 1
 --- !u!1 &3616123102264111006
 GameObject:
   m_ObjectHideFlags: 0

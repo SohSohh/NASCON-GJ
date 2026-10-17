@@ -33,8 +33,6 @@ namespace NasconGJ.Fire
         [SerializeField] private float lowFuelThreshold = 0.25f;
 
         [Header("Gameplay light")]
-        [Tooltip("Fraction of the Light's range that counts as 'lit' for shadows.")]
-        [SerializeField] private float gameplayRadiusFactor = 0.6f;
         [SerializeField] private float coveredIntensity = 0.12f;
 
         public event Action<FlammableItem> Ignited;
@@ -53,13 +51,17 @@ namespace NasconGJ.Fire
         public float MinFuelFraction { get; set; }
         public bool CountsAsPlayerFire => countsAsPlayerFire;
         public float MaxBurnTime => maxBurnTime;
+        /// <summary>Burn rate multiplier from shadow enemies or other drain effects (default 1.0).</summary>
+        public float BurnRateMultiplier { get; set; } = 1f;
+        /// <summary>0..1 shadow proximity/influence causing subtle flicker and crackle reduction.</summary>
+        public float ShadowThreatLevel { get; set; } = 0f;
         public float RemainingBurnTime { get; private set; }
         public float NormalizedFuel => infiniteBurn ? 1f : Mathf.Clamp01(RemainingBurnTime / maxBurnTime);
 
         // ILightSource
         public bool IsLit => IsBurning && !IsHolstered;
         public Vector3 Position => flameLight != null ? flameLight.transform.position : transform.position;
-        public float Radius => flameLight != null ? flameLight.range * currentRangeScale * gameplayRadiusFactor : 0f;
+        public float Radius => flameLight != null ? (baseRange > 0.1f ? baseRange : flameLight.range) * currentRangeScale : 0f;
         public Transform Transform => transform;
 
         private float baseIntensity;
@@ -171,7 +173,7 @@ namespace NasconGJ.Fire
 
             if (!infiniteBurn)
             {
-                RemainingBurnTime -= Time.deltaTime;
+                RemainingBurnTime -= Time.deltaTime * BurnRateMultiplier;
                 if (MinFuelFraction > 0f) RemainingBurnTime = Mathf.Max(RemainingBurnTime, maxBurnTime * MinFuelFraction);
                 if (RemainingBurnTime <= 0f)
                 {
@@ -184,7 +186,7 @@ namespace NasconGJ.Fire
 
             float fuel = NormalizedFuel;
             float lowFuel = fuel < lowFuelThreshold ? fuel / lowFuelThreshold : 1f; // 1 -> 0 as it dies
-            float flickerStrength = flickerAmount * (lowFuel < 1f ? 2.5f - 1.5f * lowFuel : 1f) + gust * 0.7f;
+            float flickerStrength = flickerAmount * (lowFuel < 1f ? 2.5f - 1.5f * lowFuel : 1f) + gust * 0.7f + ShadowThreatLevel * 0.15f;
             gust = Mathf.MoveTowards(gust, 0f, Time.deltaTime * 2f);
             float noise = Mathf.PerlinNoise(noiseSeed, Time.time * flickerSpeed) * 2f - 1f;
 
