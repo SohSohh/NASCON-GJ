@@ -113,7 +113,7 @@ namespace NasconGJ.EditorTools.Generation
             var hint = BuildHintCard(root);
 
             // dialogue: a soft band, the guiding light's words in pale cyan
-            var dlg = MakeRect("DialogueBox", root, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 70), new Vector2(1300, 170));
+            var dlg = MakeRect("DialogueBox", root, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 150), new Vector2(1300, 170));
             dlg.pivot = new Vector2(0.5f, 0);
             var dlgGroup = dlg.gameObject.AddComponent<CanvasGroup>();
             dlgGroup.blocksRaycasts = false;
@@ -207,7 +207,7 @@ namespace NasconGJ.EditorTools.Generation
 
         private static (CanvasGroup group, RectTransform card, TMP_Text keyText, RectTransform keyCap, TMP_Text label) BuildHintCard(RectTransform root)
         {
-            var holder = MakeRect("Hint", root, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 372), new Vector2(10, 76));
+            var holder = MakeRect("Hint", root, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 200), new Vector2(10, 76));
             var group = holder.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             var card = MakeRect("Card", holder, Center, Center, Vector2.zero, new Vector2(10, 76));
@@ -254,7 +254,7 @@ namespace NasconGJ.EditorTools.Generation
             var uiAudio = root.gameObject.AddComponent<AudioSource>();
             uiAudio.playOnAwake = false;
             var music = root.gameObject.AddComponent<AudioSource>();
-            music.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(GenUtil.Root + "/Audio/Music/MUS_MainAmbience.mp3") ?? AudioGenerator.Load("MUS_MenuDrone");
+            music.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(GenUtil.Root + "/Audio/Music/Theme.mp3");
             music.loop = true;
             music.playOnAwake = true;
             music.volume = 0.55f;

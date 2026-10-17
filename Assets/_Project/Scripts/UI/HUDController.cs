@@ -5,6 +5,7 @@ using NasconGJ.Entities;
 using NasconGJ.Fire;
 using NasconGJ.Interaction;
 using NasconGJ.Items;
+using NasconGJ.Player;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -37,6 +38,7 @@ namespace NasconGJ.UI
         private PlayerInteractor interactor;
         private FireCarrier carrier;
         private PlayerDeath death;
+        private WakeUpSequence wake;
         private Coroutine messageRoutine;
         private FlammableItem lowFuelWarned;
         private float shadowFlashTime;
@@ -72,6 +74,7 @@ namespace NasconGJ.UI
             interactor = inventory.GetComponent<PlayerInteractor>();
             carrier = inventory.GetComponent<FireCarrier>();
             death = inventory.GetComponent<PlayerDeath>();
+            wake = inventory.GetComponent<WakeUpSequence>();
             carrier.HandBurned += OnHandBurned;
             messageText.alpha = 0f;
         }
@@ -80,7 +83,6 @@ namespace NasconGJ.UI
         {
             if (inventory == null) return;
 
-            UpdatePrompt();
             UpdateFuel();
 
             transferRing.fillAmount = carrier.TransferProgress;
@@ -92,10 +94,16 @@ namespace NasconGJ.UI
             coverFill.anchorMax = new Vector2(carrier.CoverMeter, 1f);
         }
 
+        private void LateUpdate()
+        {
+            if (inventory != null) UpdatePrompt();
+        }
+
         private void UpdatePrompt()
         {
             string prompt = "";
-            if (!DialogueUI.IsOpen && (death == null || !death.IsDead))
+            if (!DialogueUI.IsOpen && (wake == null || wake.Finished) &&
+                (HintUI.Instance == null || !HintUI.Instance.IsShowing) && (death == null || !death.IsDead))
             {
                 if (carrier.TransferTarget != null)
                     prompt = $"<color=#FFF4E8><b>Hold</b></color> <mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark> <color=#FFF4E8>to pass the flame to the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}</color>";

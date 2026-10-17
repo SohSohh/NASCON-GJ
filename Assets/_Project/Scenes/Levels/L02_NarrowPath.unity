@@ -4276,7 +4276,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e7ea8e4580c3f648810433c6a9413ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NasconGJ.Puzzles.LevelExit
-  nextSceneOverride: 
+  nextSceneOverride: L03_MultiStory
   requiredPuzzleId: 
 --- !u!65 &1148577154
 BoxCollider:
@@ -5695,7 +5695,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2756743674172869576, guid: 04143537cec406d4c81fc4156a383fbd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 2.8963265
+      value: -4
       objectReference: {fileID: 0}
     - target: {fileID: 2756743674172869576, guid: 04143537cec406d4c81fc4156a383fbd, type: 3}
       propertyPath: m_LocalPosition.y
@@ -5703,7 +5703,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2756743674172869576, guid: 04143537cec406d4c81fc4156a383fbd, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 7.758095
+      value: -9.71
       objectReference: {fileID: 0}
     - target: {fileID: 2756743674172869576, guid: 04143537cec406d4c81fc4156a383fbd, type: 3}
       propertyPath: m_LocalRotation.w

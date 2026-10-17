@@ -47,7 +47,7 @@ namespace NasconGJ.UI
         {
             if (routine != null) StopCoroutine(routine);
             currentId = id;
-            routine = StartCoroutine(Run(keys, label, minDuration, dismissWhen));
+            routine = StartCoroutine(Run(keys, label, minDuration, dismissWhen, id));
         }
 
         public void Hide(string id = null)
@@ -57,10 +57,13 @@ namespace NasconGJ.UI
             routine = StartCoroutine(FadeOut());
         }
 
-        private IEnumerator Run(string keys, string label, float minDuration, Func<bool> dismissWhen)
+        private IEnumerator Run(string keys, string label, float minDuration, Func<bool> dismissWhen, string id)
         {
             // if another hint is up, let it go first so the change is readable
             if (group.alpha > 0.05f) yield return FadeOut();
+            while (DialogueUI.IsOpen) yield return null;
+            if (dismissWhen != null && dismissWhen()) yield break;
+            currentId = id;
 
             bool hasKey = !string.IsNullOrEmpty(keys);
             keyCap.gameObject.SetActive(hasKey);
@@ -76,8 +79,42 @@ namespace NasconGJ.UI
             }
             if (chimeSource != null && chimeClip != null) chimeSource.PlayOneShot(chimeClip, 0.35f);
 
-            for (float t = 0f; t < fadeInTime; t += Time.unscaledDeltaTime)
+            yield return FadeIn();
+
+            float shown = 0f;
+            while (shown < minDuration || (dismissWhen != null && !dismissWhen()))
             {
+                if (DialogueUI.IsOpen)
+                {
+                    group.alpha = 0f;
+                    while (DialogueUI.IsOpen) yield return null;
+                    if (dismissWhen != null && dismissWhen()) break;
+                    yield return FadeIn();
+                }
+                shown += Time.deltaTime;
+                if (hasKey) keyCap.localScale = Vector3.one * (1f + Mathf.Sin(shown * 4f) * 0.04f);
+                yield return null;
+            }
+            keyCap.localScale = Vector3.one;
+            yield return FadeOut();
+        }
+
+        private void LateUpdate()
+        {
+            // A guide can start speaking after our coroutine has run this frame.
+            if (DialogueUI.IsOpen) group.alpha = 0f;
+        }
+
+        private IEnumerator FadeIn()
+        {
+            for (float t = 0f; t < fadeInTime; t += Time.deltaTime)
+            {
+                if (DialogueUI.IsOpen)
+                {
+                    group.alpha = 0f;
+                    while (DialogueUI.IsOpen) yield return null;
+                    t = 0f;
+                }
                 float k = Mathf.SmoothStep(0f, 1f, t / fadeInTime);
                 group.alpha = k;
                 card.anchoredPosition = new Vector2(0f, Mathf.Lerp(-20f, 0f, k));
@@ -86,23 +123,13 @@ namespace NasconGJ.UI
             }
             group.alpha = 1f;
             card.localScale = Vector3.one;
-
-            float shown = 0f;
-            while (shown < minDuration || (dismissWhen != null && !dismissWhen()))
-            {
-                shown += Time.unscaledDeltaTime;
-                // slow breathing pulse on the key cap so the eye goes there
-                if (hasKey) keyCap.localScale = Vector3.one * (1f + Mathf.Sin(shown * 4f) * 0.04f);
-                yield return null;
-            }
-            keyCap.localScale = Vector3.one;
-            yield return FadeOut();
+            card.anchoredPosition = Vector2.zero;
         }
 
         private IEnumerator FadeOut()
         {
             float from = group.alpha;
-            for (float t = 0f; t < fadeOutTime; t += Time.unscaledDeltaTime)
+            for (float t = 0f; t < fadeOutTime; t += Time.deltaTime)
             {
                 group.alpha = Mathf.Lerp(from, 0f, t / fadeOutTime);
                 yield return null;
