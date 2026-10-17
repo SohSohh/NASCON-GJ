@@ -31,7 +31,7 @@ Material:
     m_Floats:
     - _PaletteStrength: 0.3
     - _PaperScale: 3
-    - _PaperStrength: 0.12
+    - _PaperStrength: 0
     - _Radius: 3
     m_Colors:
     - _PaletteHigh: {r: 1, g: 0.92, b: 0.76, a: 1}

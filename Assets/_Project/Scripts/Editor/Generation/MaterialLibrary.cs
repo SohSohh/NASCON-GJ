@@ -198,6 +198,7 @@ namespace NasconGJ.EditorTools.Generation
         {
             var mat = LoadOrCreate(PainterlyMat, "NASCON/PainterlyPost");
             mat.SetTexture("_PaperTex", grit);
+            mat.SetFloat("_PaperStrength", 0f);
             mat.SetFloat("_PaletteStrength", 0.3f);
             mat.SetColor("_PaletteShadow", new Color(0.07f, 0.04f, 0.08f));
             mat.SetColor("_PaletteMid", new Color(0.5f, 0.25f, 0.12f));
@@ -427,7 +428,7 @@ namespace NasconGJ.EditorTools.Generation
             vignette.color.Override(new Color(0.03f, 0.01f, 0.03f));
 
             var color = Comp<ColorAdjustments>();
-            color.postExposure.Override(0.45f);
+            color.postExposure.Override(1f);
             color.contrast.Override(10f);
             color.saturation.Override(-8f);
             color.colorFilter.Override(new Color(1f, 0.93f, 0.86f));
@@ -437,7 +438,7 @@ namespace NasconGJ.EditorTools.Generation
 
             var grain = Comp<FilmGrain>();
             grain.type.Override(FilmGrainLookup.Medium3);
-            grain.intensity.Override(0.28f);
+            grain.intensity.Override(0f);
 
             EditorUtility.SetDirty(profile);
         }
