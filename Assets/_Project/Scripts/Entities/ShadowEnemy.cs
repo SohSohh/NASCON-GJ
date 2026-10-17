@@ -1,6 +1,7 @@
 using NasconGJ.Core;
 using NasconGJ.Death;
 using NasconGJ.Fire;
+using NasconGJ.Player;
 using UnityEngine;
 
 namespace NasconGJ.Entities
@@ -40,6 +41,10 @@ namespace NasconGJ.Entities
         [SerializeField] private float crawlSpeed = 1.5f;
         [Tooltip("Movement speed multiplier when traversing low/weak light (default 60%).")]
         [SerializeField] private float weakLightSpeedMultiplier = 0.6f;
+        [Tooltip("Crawl speed multiplier applied while herding when the player is sprinting toward an exit.")]
+        [SerializeField] private float herdSprintCrawlMultiplier = 2.5f;
+        [Tooltip("Max crawl speed multiplier when surging forward in Approach (default 1.4).")]
+        [SerializeField] private float approachSpeedMultiplier = 1.4f;
 
         [Header("Senses & Distances")]
         [SerializeField] private float detectRange = 13f;
@@ -47,7 +52,10 @@ namespace NasconGJ.Entities
         [SerializeField] private float preferredApproachMax = 6f;
         [SerializeField] private float drainRadius = 7f;
         [SerializeField] private float fullDrainDistance = 1.75f;
+        [Header("Combat & Killing")]
         [SerializeField] private float killRange = 1.6f;
+        [Tooltip("Point-blank contact distance that kills the player immediately on touch (even if frozen).")]
+        [SerializeField] private float contactKillRange = 0.9f;
         [SerializeField] private float windupTime = 0.55f;
 
         [Header("Light Rules")]
@@ -78,8 +86,10 @@ namespace NasconGJ.Entities
         private Vector3 visualNormal, visualUp;
         private Vector3 lightPos;
         private float stateTime, animTime, resumeTimer, facing = 1f, wanderSeed, whisperVolume;
+        private float orbitAngle;
         private Transform player;
         private PlayerDeath death;
+        private FirstPersonController playerController;
         private bool isAssignedHerder;
         private HerdTarget currentHerdTarget;
         private Vector3 herdDestination;
@@ -101,6 +111,7 @@ namespace NasconGJ.Entities
         private void Start()
         {
             wanderSeed = Random.value * 100f;
+            orbitAngle = wanderSeed * 36f;
             if (Physics.Raycast(transform.position + transform.forward * 0.6f, -transform.forward, out RaycastHit hit, 2f, surfaceMask, QueryTriggerInteraction.Ignore))
             {
                 pos = hit.point;
@@ -131,6 +142,7 @@ namespace NasconGJ.Entities
             if (go == null) return;
             player = go.transform;
             death = go.GetComponent<PlayerDeath>();
+            playerController = go.GetComponent<FirstPersonController>();
         }
 
         public void Awaken()
@@ -155,6 +167,11 @@ namespace NasconGJ.Entities
             Current = state;
             stateTime = 0f;
             if (state == State.Frozen && smoke != null) smoke.Emit(8);
+            if (state == State.Windup && whisper != null)
+            {
+                whisper.pitch = 1.35f;
+                whisper.volume = 1f;
+            }
         }
 
         private void Update()
@@ -166,6 +183,7 @@ namespace NasconGJ.Entities
 
             Vector3 chest = player != null ? player.position + Vector3.up * 1.1f : pos;
             float distance = player != null ? Vector3.Distance(chest, Center) : float.PositiveInfinity;
+            float contactDist = player != null ? Mathf.Min(distance, Vector3.Distance(player.position, pos)) : float.PositiveInfinity;
             bool playerDead = death != null && death.IsDead;
 
             // Sample continuous light exposure across body and feet (catches ground torches and held torches)
@@ -195,7 +213,7 @@ namespace NasconGJ.Entities
                         if (!playerDead && player != null)
                         {
                             if (isAssignedHerder && currentHerdTarget != null) Enter(State.Herd);
-                            else if (distance <= drainRadius) Enter(State.Drain);
+                            else if (distance <= preferredApproachMin) Enter(State.Drain);
                             else if (distance <= detectRange) Enter(State.Approach);
                             else Enter(State.Observe);
                         }
@@ -207,6 +225,9 @@ namespace NasconGJ.Entities
                 }
             }
 
+            // Check lethal player proximity (Option A: contact kill on touch, windup within reach when active)
+            CheckPlayerProximity(contactDist, playerDead);
+
             // State behavior execution
             switch (Current)
             {
@@ -214,7 +235,7 @@ namespace NasconGJ.Entities
                     UpdateDormant(distance, playerDead);
                     break;
                 case State.Observe:
-                    UpdateObserve(chest, distance, playerDead);
+                    UpdateObserve(chest, distance, playerDead, dt);
                     break;
                 case State.Approach:
                     UpdateApproach(chest, distance, playerDead);
@@ -249,7 +270,7 @@ namespace NasconGJ.Entities
             }
         }
 
-        private void UpdateObserve(Vector3 chest, float distance, bool playerDead)
+        private void UpdateObserve(Vector3 chest, float distance, bool playerDead, float dt)
         {
             if (playerDead || distance > detectRange * 1.4f)
             {
@@ -263,11 +284,12 @@ namespace NasconGJ.Entities
                 return;
             }
 
-            // Crawl toward player flank/side position
-            Vector3 camFwd = Camera.main != null ? Camera.main.transform.forward : Vector3.forward;
-            Vector3 sideOffset = Vector3.Cross(camFwd, Vector3.up) * 4.5f;
-            Vector3 observeTarget = chest + sideOffset;
-            Move(observeTarget - pos, crawlSpeed);
+            // Circle around player at distance to stalk them, tightening over time
+            orbitAngle += dt * 35f;
+            Vector3 orbitDir = new Vector3(Mathf.Sin(orbitAngle * Mathf.Deg2Rad), 0f, Mathf.Cos(orbitAngle * Mathf.Deg2Rad));
+            float stalkRadius = Mathf.Lerp(preferredApproachMax + 2f, preferredApproachMax - 0.5f, Mathf.Clamp01(stateTime / 5f));
+            Vector3 observeTarget = chest + orbitDir * stalkRadius;
+            Move(observeTarget - pos, crawlSpeed * 0.75f);
 
             if (distance <= preferredApproachMax)
             {
@@ -291,8 +313,11 @@ namespace NasconGJ.Entities
 
             if (distance > preferredApproachMin)
             {
-                // Advance toward preferred distance
-                Move(chest - pos, crawlSpeed);
+                // Advance toward preferred distance with predatory speed ramp (slow far, fast close)
+                float range = Mathf.Max(0.1f, detectRange - preferredApproachMin);
+                float t = 1f - Mathf.Clamp01((distance - preferredApproachMin) / range);
+                float speed = crawlSpeed * Mathf.Lerp(0.8f, approachSpeedMultiplier, t);
+                Move(chest - pos, speed);
             }
             else if (distance < preferredApproachMin * 0.75f)
             {
@@ -300,8 +325,8 @@ namespace NasconGJ.Entities
                 Move(pos - chest, lurkSpeed);
             }
 
-            // When closing in within drain radius, establish sustained drain
-            if (distance <= drainRadius)
+            // When closing in within preferred distance, establish sustained drain
+            if (distance <= preferredApproachMin)
             {
                 Enter(State.Drain);
             }
@@ -326,13 +351,6 @@ namespace NasconGJ.Entities
             {
                 Move(chest - pos, crawlSpeed);
             }
-
-            // Reserve windup/lunge for critical low-fuel or extinguished player fire
-            bool playerFireOut = death != null && death.InDarkness;
-            if (distance < killRange && playerFireOut)
-            {
-                Enter(State.Windup);
-            }
         }
 
         private void UpdateHerd(Vector3 chest, float distance, bool playerDead, float dt)
@@ -343,12 +361,15 @@ namespace NasconGJ.Entities
                 return;
             }
 
+            bool playerSprinting = playerController != null && playerController.IsSprinting;
+            float actualCrawlSpeed = playerSprinting ? crawlSpeed * herdSprintCrawlMultiplier : crawlSpeed;
+
             herdRepathTimer -= dt;
             if (herdRepathTimer <= 0f)
             {
-                herdRepathTimer = 0.35f;
+                herdRepathTimer = playerSprinting ? 0.10f : 0.35f;
                 Vector3 playerFwd = Camera.main != null ? Camera.main.transform.forward : Vector3.forward;
-                if (!EvaluateHerdDestination(player.position, playerFwd, currentHerdTarget.Position, out herdDestination))
+                if (!EvaluateHerdDestination(player.position, playerFwd, currentHerdTarget.Position, playerSprinting, out herdDestination))
                 {
                     // No viable dark path to herd from (e.g. player reached safe light or route is too bright).
                     // Fall back to drain/approach from darkness.
@@ -359,7 +380,7 @@ namespace NasconGJ.Entities
 
             if ((herdDestination - pos).sqrMagnitude > 0.09f)
             {
-                Move(herdDestination - pos, crawlSpeed);
+                Move(herdDestination - pos, actualCrawlSpeed);
             }
         }
 
@@ -375,6 +396,24 @@ namespace NasconGJ.Entities
                 {
                     Enter(State.Drain);
                 }
+            }
+        }
+
+        private void CheckPlayerProximity(float dist, bool playerDead)
+        {
+            if (playerDead || player == null || Current == State.Lunge) return;
+
+            // Point-blank physical contact kill (Option A: fatal contact even if frozen)
+            if (dist <= contactKillRange)
+            {
+                Lunge();
+                return;
+            }
+
+            // Lethal melee reach: active shadows wind up to strike (safe when frozen in direct light)
+            if (dist <= killRange && Current != State.Frozen && Current != State.Windup)
+            {
+                Enter(State.Windup);
             }
         }
 
@@ -520,7 +559,9 @@ namespace NasconGJ.Entities
                 bool occluded = Physics.Raycast(point, toLight / d, d - 0.25f, occluderMask, QueryTriggerInteraction.Ignore);
                 if (occluded && !blockedByCastShadows) continue;
 
-                float exposure = 1f - Mathf.Clamp01(d / source.Radius);
+                float linearExp = 1f - Mathf.Clamp01(d / source.Radius);
+                // Carried items use quadratic falloff so the 70% freeze threshold lands at 2 to 3m (~2.69m for a full torch)
+                float exposure = source.IsCarried ? (linearExp * linearExp) : linearExp;
                 totalExposure = Mathf.Clamp01(totalExposure + exposure);
 
                 if (exposure > maxExposure)
@@ -545,7 +586,7 @@ namespace NasconGJ.Entities
 
         // ------------------------------------------------------------ herd targeting
 
-        private bool EvaluateHerdDestination(Vector3 playerPos, Vector3 playerForward, Vector3 targetPos, out Vector3 bestDestination)
+        private bool EvaluateHerdDestination(Vector3 playerPos, Vector3 playerForward, Vector3 targetPos, bool playerSprinting, out Vector3 bestDestination)
         {
             bestDestination = pos;
 
@@ -563,7 +604,12 @@ namespace NasconGJ.Entities
                 return false;
             }
 
-            Vector3 toTarget = Vector3.ProjectOnPlane(targetPos - playerPos, Vector3.up);
+            // When sprinting, predict where the player will be in 1.0 s so we intercept ahead of them
+            float predictionTime = playerSprinting ? 1.0f : 0.5f;
+            float playerSpeed = playerController != null ? playerController.HorizontalSpeed : 0f;
+            Vector3 predictedPlayerPos = playerPos + playerForward * (playerSpeed * predictionTime);
+
+            Vector3 toTarget = Vector3.ProjectOnPlane(targetPos - predictedPlayerPos, Vector3.up);
             if (toTarget.sqrMagnitude < 0.01f) toTarget = Vector3.forward;
             toTarget.Normalize();
 
@@ -571,12 +617,15 @@ namespace NasconGJ.Entities
             bool foundValid = false;
 
             float[] angles = { 0f, 25f, -25f, 45f, -45f, 65f, -65f, 85f, -85f };
-            float sampleDist = Mathf.Clamp(Vector3.Distance(playerPos, pos), 3.5f, 5.5f);
+            // Wider upper bound when sprinting so we can pick an intercept point further down the corridor
+            float sampleDist = Mathf.Clamp(Vector3.Distance(predictedPlayerPos, pos), 3.5f, playerSprinting ? 8.0f : 5.5f);
+            // Allow slightly brighter positions when player is sprinting (prevents "no valid point" fallback in torchlit corridors)
+            float lightLimit = playerSprinting ? 0.50f : 0.35f;
 
             for (int i = 0; i < angles.Length; i++)
             {
                 Vector3 testDir = Quaternion.AngleAxis(angles[i], Vector3.up) * toTarget;
-                Vector3 probePoint = playerPos + testDir * sampleDist;
+                Vector3 probePoint = predictedPlayerPos + testDir * sampleDist;
 
                 // Never pick or probe points that enter the brazier / light standoff zone
                 if (Vector3.Distance(probePoint, targetPos) < minSafeTargetDist) continue;
@@ -590,8 +639,7 @@ namespace NasconGJ.Entities
 
                     // Evaluate full feet & body exposure
                     float candExposure = SamplePointFullExposure(candidate, hit.normal);
-                    // Strictly reject destinations in noticeable/strong light (low light limit: 0.35)
-                    if (candExposure > 0.35f) continue;
+                    if (candExposure > lightLimit) continue;
 
                     float candDist = Vector3.Distance(candidate, playerPos);
                     float distScore = 1f - Mathf.Abs(candDist - 4f) / 4f;
@@ -602,7 +650,7 @@ namespace NasconGJ.Entities
                     float viewDot = Vector3.Dot(candDir, playerForward);
                     float viewScore = 1f - Mathf.Abs(viewDot - 0.2f); // prefers peripheral angles
 
-                    float darkScore = 1f - (candExposure / 0.35f);
+                    float darkScore = 1f - (candExposure / lightLimit);
 
                     float total = (targetAlignment * 2.5f) + (distScore * 2f) + (viewScore * 1.5f) + (darkScore * 4.0f);
                     if (total > bestScore)

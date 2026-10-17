@@ -12,6 +12,7 @@ namespace NasconGJ.Fire
         Vector3 Position { get; }
         float Radius { get; }
         Transform Transform { get; }
+        bool IsCarried { get; }
     }
 
     /// <summary>
