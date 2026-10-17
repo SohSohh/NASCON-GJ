@@ -144,7 +144,6 @@ namespace NasconGJ.UI
         private void OnPlayerDied()
         {
             ShowMessage(death != null ? death.DeathReason : "You were consumed.", 10f);
-            if (ScreenFader.Instance != null) ScreenFader.Instance.FadeTo(1f, 2.5f);
         }
 
         public void ShowMessage(string text, float duration)

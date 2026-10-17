@@ -312,16 +312,13 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 3329
   leashRadius: 9
-  lurkSpeed: 0.35
-  crawlSpeed: 1.5
+  lurkSpeed: 1
+  crawlSpeed: 5
   weakLightSpeedMultiplier: 0.6
   detectRange: 13
-  preferredApproachMin: 4
-  preferredApproachMax: 6
   drainRadius: 7.5
   fullDrainDistance: 1.75
   killRange: 1.6
-  windupTime: 0.55
   freezeThreshold: 0.7
   resumeDelay: 0.75
   occluderMask:
