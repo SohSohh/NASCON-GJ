@@ -21,6 +21,7 @@ namespace NasconGJ.Fire
         private FireCarrier carrier;
         private float uncoveredTime;
         private bool inside;
+        private bool hinted;               // the RMB card, once per time you step into the wind
 
         private BoxCollider box;
 
@@ -58,12 +59,19 @@ namespace NasconGJ.Fire
             }
             bool wasInside = inside;
             inside = inventory != null && box.bounds.Contains(inventory.transform.position + Vector3.up);
-            if (inside && !wasInside) uncoveredTime = 0f;
+            if (inside && !wasInside) { uncoveredTime = 0f; hinted = false; }
             if (!inside) return;
             var flame = inventory.ActiveFlame;
             if (flame == null || !flame.IsBurning) return;
 
             bool covered = carrier != null && carrier.IsCovering;
+            if (!covered && !hinted && UI.HintUI.Instance != null)
+            {
+                // always say how to save the flame here, even if the tutorial lesson was skipped past
+                hinted = true;
+                UI.HintUI.Instance.Show("RMB", "Hold to shield the flame from the wind", 1.2f,
+                    () => !inside || (carrier != null && carrier.IsCovering), "draft-rmb");
+            }
             flame.SetGust(covered ? 0.15f : 1f);
             if (covered)
             {
