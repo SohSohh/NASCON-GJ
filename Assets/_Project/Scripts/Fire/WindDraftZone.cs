@@ -22,7 +22,13 @@ namespace NasconGJ.Fire
         private float uncoveredTime;
         private bool inside;
 
-        private void Awake() => GetComponent<BoxCollider>().isTrigger = true;
+        private BoxCollider box;
+
+        private void Awake()
+        {
+            box = GetComponent<BoxCollider>();
+            box.isTrigger = true;
+        }
 
         private void OnTriggerEnter(Collider other)
         {
@@ -43,7 +49,17 @@ namespace NasconGJ.Fire
             if (windAudio != null)
                 windAudio.volume = Mathf.MoveTowards(windAudio.volume, inside ? 0.9f : 0.35f, Time.deltaTime);
 
-            if (!inside || inventory == null) return;
+            // decide by position every frame, not by trigger events (a missed enter or exit left the flame
+            // draining all over the level, or not at all)
+            if (inventory == null)
+            {
+                var player = GameObject.FindWithTag(GameTags.Player);
+                if (player != null) { inventory = player.GetComponent<PlayerInventory>(); carrier = player.GetComponent<FireCarrier>(); }
+            }
+            bool wasInside = inside;
+            inside = inventory != null && box.bounds.Contains(inventory.transform.position + Vector3.up);
+            if (inside && !wasInside) uncoveredTime = 0f;
+            if (!inside) return;
             var flame = inventory.ActiveFlame;
             if (flame == null || !flame.IsBurning) return;
 

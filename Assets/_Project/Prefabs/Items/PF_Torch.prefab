@@ -160,7 +160,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NasconGJ.Fire.FlammableItem
   displayName: Torch
-  maxBurnTime: 90
+  maxBurnTime: 140
   infiniteBurn: 0
   startLit: 0
   startFuelFraction: 1

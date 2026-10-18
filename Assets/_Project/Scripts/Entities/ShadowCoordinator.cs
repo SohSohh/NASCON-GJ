@@ -42,7 +42,7 @@ namespace NasconGJ.Entities
         private float drainLook;
 
         // Change this value to tune how fast the held flame burns inside a Shadow's effect range.
-        public const float TorchBurnRateInShadowRange = 5f;
+        public const float TorchBurnRateInShadowRange = 3f;
 
         private Transform player;
         private PlayerInventory inventory;

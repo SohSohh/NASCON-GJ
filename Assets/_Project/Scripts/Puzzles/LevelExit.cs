@@ -15,6 +15,9 @@ namespace NasconGJ.Puzzles
         [SerializeField] private string requiredPuzzleId = "";
 
         private bool unlocked;
+
+        /// <summary>Open (puzzle solved, or none needed): a level passage beyond it may be walked.</summary>
+        public bool IsOpen => unlocked;
         private bool used;
 
         private void OnEnable() => GameEvents.PuzzleSolved += OnPuzzleSolved;
@@ -36,6 +39,7 @@ namespace NasconGJ.Puzzles
         private void OnTriggerEnter(Collider other)
         {
             if (used || !unlocked || !other.CompareTag(GameTags.Player)) return;
+            if (FindAnyObjectByType<LevelPassage>() is { } passage && passage.IsExit) return;   // the passage beyond carries you on, no fade
             used = true;
             StartCoroutine(Exit());
         }

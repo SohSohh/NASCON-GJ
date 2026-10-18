@@ -21,17 +21,24 @@ namespace NasconGJ.Death
         [SerializeField, Range(0f, 1f)] private float orangeFlickerAlpha = 0.2f;
         [SerializeField, Min(0f)] private float faceFadeDuration = 0.02f;
         [SerializeField, Min(0f)] private float blackHold = 0.5f;
+        [SerializeField] private AudioClip impactHit;
+        [Header("Impact frames (versions of the open face)")]
+        [SerializeField] private Texture2D impactNegative;
+        [SerializeField] private Texture2D impactRed;
+        [SerializeField] private Texture2D impactHarsh;
 
         public string Phase { get; private set; }
         public bool IsConfigured => closedFace != null && openFace != null && jumpscare != null;
         private UnityEngine.UI.RawImage face;
         private UnityEngine.UI.RawImage vignette;
+        private UnityEngine.UI.RawImage ghostRed, ghostCyan;
         private UnityEngine.UI.Image orangeFlash;
         private UnityEngine.UI.Image blackBackdrop;
         private RectTransform visuals;
         private RectTransform canvasRect;
         private AudioSource voice;
         private Texture2D vignetteTexture;
+        private Texture2D featherTexture;
         private readonly List<(AudioSource source, bool muted)> mutedSources = new();
 
         private void Awake()
@@ -75,6 +82,21 @@ namespace NasconGJ.Death
             face.raycastTarget = false;
             face.texture = closedFace;
             face.rectTransform.anchorMin = face.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            // feathered edges: a soft black frame over the face (it rides on the face, so it grows with it)
+            var featherObject = new GameObject("Feather", typeof(RectTransform), typeof(UnityEngine.UI.RawImage));
+            featherObject.transform.SetParent(portrait.transform, false);
+            var featherRect = (RectTransform)featherObject.transform;
+            featherRect.anchorMin = Vector2.zero;
+            featherRect.anchorMax = Vector2.one;
+            featherRect.offsetMin = featherRect.offsetMax = Vector2.zero;
+            var feather = featherObject.GetComponent<UnityEngine.UI.RawImage>();
+            feather.raycastTarget = false;
+            feather.color = Color.black;
+            featherTexture = CreateFeatherTexture();
+            feather.texture = featherTexture;
+            // colour-split ghosts behind the feather: the image tears into red and cyan on every hit
+            ghostRed = Ghost("GhostRed", new Color(1f, 0.1f, 0.05f, 0f));
+            ghostCyan = Ghost("GhostCyan", new Color(0.1f, 0.9f, 1f, 0f));
             var flashObject = new GameObject("OrangeFlash", typeof(RectTransform), typeof(UnityEngine.UI.Image));
             flashObject.transform.SetParent(transform, false);
             var flashRect = (RectTransform)flashObject.transform;
@@ -134,38 +156,64 @@ namespace NasconGJ.Death
             face.texture = openFace;
             orangeFlash.color = new Color(1f, 0.22f, 0f, orangeFlickerAlpha * 0.35f);
             Phase = "Rush";
-            // Audio and the first increase in size happen in the same frame.
+            // Audio and the first jump in size happen in the same frame.
             voice.Play();
             float soundStarted = Time.unscaledTime;
             float endHeight = Mathf.Max(canvasRect.rect.height, canvasRect.rect.width / aspect) * 1.3f;
             Vector2 endSize = new Vector2(endHeight * aspect, endHeight);
-            float elapsed = 0f;
-            while (elapsed < rushDuration)
+            // stop-motion: it comes at you in hard cuts, not a smooth zoom
+            float[] steps = { 0.1f, 0.24f, 0.45f, 0.72f, 1f };
+            float[] holds = { 0.24f, 0.2f, 0.2f, 0.18f, 0.18f };
+            for (int i = 0; i < steps.Length; i++)
             {
-                elapsed += Time.unscaledDeltaTime;
-                float t = Mathf.Clamp01(elapsed / rushDuration);
-                float acceleration = 0.1f * t + 0.9f * t * t * t;
-                face.rectTransform.sizeDelta = Vector2.Lerp(initialSize, endSize, acceleration);
-                ApplyShake(rushShake * (1f - t * 0.5f), rushRotationShake * (1f - t * 0.35f));
-                orangeFlash.color = new Color(1f, 0.22f, 0f,
-                    orangeFlickerAlpha * (0.15f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 35f)) * 0.45f));
-                yield return null;
+                face.rectTransform.sizeDelta = Vector2.Lerp(initialSize, endSize, steps[i]);
+                float hold = holds[i] * rushDuration, held = 0f;
+                bool firstFrame = true;
+                while (held < hold)
+                {
+                    held += Time.unscaledDeltaTime;
+                    float kick = firstFrame ? 2.2f : 0.6f;
+                    ApplyShake(rushShake * kick, rushRotationShake * kick);
+                    Ghosts(firstFrame ? 22f : 8f, firstFrame ? 0.3f : 0.12f);
+                    orangeFlash.color = new Color(1f, 0.22f, 0f, firstFrame ? orangeFlickerAlpha * 0.9f : orangeFlickerAlpha * 0.2f);
+                    firstFrame = false;
+                    yield return null;
+                }
             }
             face.rectTransform.sizeDelta = endSize;
             ResetShake();
+
             Phase = "Impact";
-            Color faceColor = face.color;
-            float fadeElapsed = 0f;
-            while (fadeElapsed < faceFadeDuration)
+            // hit-stop: the frame freezes on the hit, and the scream freezes with it
+            Ghosts(0f, 0f);
+            orangeFlash.color = Color.clear;
+            voice.Pause();
+            if (impactHit != null) voice.PlayOneShot(impactHit, 1f);
+            yield return new WaitForSecondsRealtime(0.09f);
+            voice.UnPause();
+            Color bg = blackBackdrop.color;
+            // impact frames, each a hard cut with its own kick; the scream stutters through them
+            yield return ImpactFrame(Color.black, impactNegative, 1.04f, new Vector2(-24f, 10f), 9f, 0.055f, true);
+            yield return ImpactFrame(Color.black, impactRed, 1.14f, new Vector2(30f, -14f), -7f, 0.05f, false);
+            if (impactHit != null) voice.PlayOneShot(impactHit, 0.8f);
+            yield return ImpactFrame(Color.black, impactHarsh, 1.22f, new Vector2(-12f, -26f), 5f, 0.055f, true);
+            yield return ImpactFrame(Color.black, impactNegative, 1.5f, new Vector2(40f, 30f), -11f, 0.04f, false);
+            yield return ImpactFrame(Color.white, null, 1.5f, Vector2.zero, 0f, 0.035f, true, hideFace: true);
+            yield return ImpactFrame(Color.black, impactRed, 1.6f, new Vector2(-30f, 18f), 6f, 0.045f, false);
+            // the after-shudder
+            blackBackdrop.color = bg;
+            face.texture = openFace;
+            face.color = Color.white;
+            for (int i = 0; i < 4; i++)
             {
-                fadeElapsed += Time.unscaledDeltaTime;
-                Color fadedColor = faceColor;
-                fadedColor.a = Mathf.Lerp(faceColor.a, 0f, Mathf.Clamp01(fadeElapsed / faceFadeDuration));
-                face.color = fadedColor;
-                yield return null;
+                face.rectTransform.sizeDelta = endSize * (1.05f + i * 0.03f);
+                face.rectTransform.anchoredPosition = Random.insideUnitCircle * (40f - i * 8f);
+                face.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Random.Range(-6f, 6f));
+                Ghosts(16f - i * 3f, 0.22f);
+                yield return new WaitForSecondsRealtime(0.035f);
             }
-            faceColor.a = 0f;
-            face.color = faceColor;
+            Ghosts(0f, 0f);
+            ResetShake();
             face.enabled = false;
             orangeFlash.color = Color.clear;
             Phase = "Black";
@@ -180,7 +228,59 @@ namespace NasconGJ.Death
             foreach (var entry in mutedSources)
                 if (entry.source != null) entry.source.mute = entry.muted;
             if (vignetteTexture != null) Destroy(vignetteTexture);
+            if (featherTexture != null) Destroy(featherTexture);
         }
+
+        private UnityEngine.UI.RawImage Ghost(string name, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(UnityEngine.UI.RawImage));
+            go.transform.SetParent(face.transform, false);
+            go.transform.SetSiblingIndex(0);                 // under the feather frame
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            var img = go.GetComponent<UnityEngine.UI.RawImage>();
+            img.raycastTarget = false;
+            img.color = color;
+            return img;
+        }
+
+        /// <summary>Red and cyan copies pulled apart by <paramref name="offset"/> pixels.</summary>
+        private void Ghosts(float offset, float alpha)
+        {
+            foreach (var (g, sign) in new[] { (ghostRed, 1f), (ghostCyan, -1f) })
+            {
+                if (g == null) continue;
+                g.texture = face.texture;
+                g.rectTransform.anchoredPosition = new Vector2(offset * sign, offset * 0.3f * -sign);
+                var c = g.color; c.a = alpha; g.color = c;
+            }
+        }
+
+        /// <summary>One impact frame: a hard cut to another version of the face (negative, blood red, harsh), jolted, held briefly.</summary>
+        private IEnumerator ImpactFrame(Color background, Texture2D image, float scale, Vector2 jolt, float roll, float hold, bool stutterAudio, bool hideFace = false)
+        {
+            blackBackdrop.color = background;
+            vignette.enabled = background != Color.white;
+            face.enabled = !hideFace;
+            face.color = Color.white;
+            face.texture = image != null ? image : openFace;
+            Vector2 baseSize = face.rectTransform.sizeDelta;
+            face.rectTransform.sizeDelta = baseSize * scale / Mathf.Max(0.01f, currentScale);
+            currentScale = scale;
+            face.rectTransform.anchoredPosition = jolt;
+            face.rectTransform.localRotation = Quaternion.Euler(0f, 0f, roll);
+            visuals.anchoredPosition = jolt * 0.5f;
+            Ghosts(hideFace ? 0f : 18f, hideFace ? 0f : 0.22f);
+            if (stutterAudio) voice.Pause();
+            yield return new WaitForSecondsRealtime(hold * 0.5f);
+            if (stutterAudio) voice.UnPause();
+            yield return new WaitForSecondsRealtime(hold * 0.5f);
+            vignette.enabled = true;
+        }
+
+        private float currentScale = 1f;
 
         private void ApplyShake(float strength, float rotationStrength = -1f)
         {
@@ -201,6 +301,26 @@ namespace NasconGJ.Death
             visuals.anchoredPosition = Vector2.zero;
             face.rectTransform.anchoredPosition = Vector2.zero;
             face.rectTransform.localRotation = Quaternion.identity;
+        }
+
+        /// <summary>Opaque at the border, clear inside: the image fades into the black with no hard rectangle.</summary>
+        private static Texture2D CreateFeatherTexture()
+        {
+            const int size = 256;
+            const float margin = 0.2f;   // how far in (fraction of each side) the fade reaches
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (x + 0.5f) / size, v = (y + 0.5f) / size;
+                float edge = Mathf.Min(Mathf.Min(u, 1f - u), Mathf.Min(v, 1f - v));      // distance to the nearest side
+                float corner = Mathf.Max(0f, Vector2.Distance(new Vector2(Mathf.Clamp(u, margin, 1f - margin), Mathf.Clamp(v, margin, 1f - margin)), new Vector2(u, v)) / margin);
+                float k = Mathf.Max(1f - edge / margin, corner);                             // rounded corners
+                float alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(k));
+                texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha * alpha));
+            }
+            texture.Apply();
+            return texture;
         }
 
         private static Texture2D CreateVignetteTexture()

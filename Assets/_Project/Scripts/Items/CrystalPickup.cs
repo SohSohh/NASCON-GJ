@@ -24,6 +24,9 @@ namespace NasconGJ.Items
         [Tooltip("Leave empty to use SceneNames.StoryOrder (L06_Escape).")]
         [SerializeField] private string nextSceneOverride = "";
 
+        [Tooltip("The level carries on after the pickup (the escape starts right here): no fade, no load.")]
+        [SerializeField] private bool continueInScene;
+
         [SerializeField] private float fadeDuration = 1.2f;
         [SerializeField] private float delayBeforeLoad = 0.2f;
 
@@ -116,6 +119,8 @@ namespace NasconGJ.Items
             {
                 glowLight.enabled = false;
             }
+
+            if (continueInScene) yield break;
 
             // Fade screen out smoothly
             if (ScreenFader.Instance != null)

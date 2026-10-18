@@ -27,6 +27,8 @@ namespace NasconGJ.UI
         private string currentId;
 
         public bool IsShowing => group.alpha > 0.01f;
+        /// <summary>Id of the hint on screen (world prompts use ids starting with "prompt:").</summary>
+        public string CurrentId => currentId;
 
         private void Awake()
         {
@@ -43,11 +45,11 @@ namespace NasconGJ.UI
         /// Show a hint for at least <paramref name="minDuration"/> seconds. With <paramref name="dismissWhen"/> it then stays
         /// until that returns true (no time limit); without it, it fades after minDuration.
         /// </summary>
-        public void Show(string keys, string label, float minDuration, Func<bool> dismissWhen = null, string id = null)
+        public void Show(string keys, string label, float minDuration, Func<bool> dismissWhen = null, string id = null, bool quiet = false)
         {
             if (routine != null) StopCoroutine(routine);
             currentId = id;
-            routine = StartCoroutine(Run(keys, label, minDuration, dismissWhen, id));
+            routine = StartCoroutine(Run(keys, label, minDuration, dismissWhen, id, quiet));
         }
 
         public void Hide(string id = null)
@@ -57,7 +59,7 @@ namespace NasconGJ.UI
             routine = StartCoroutine(FadeOut());
         }
 
-        private IEnumerator Run(string keys, string label, float minDuration, Func<bool> dismissWhen, string id)
+        private IEnumerator Run(string keys, string label, float minDuration, Func<bool> dismissWhen, string id, bool quiet)
         {
             // if another hint is up, let it go first so the change is readable
             if (group.alpha > 0.05f) yield return FadeOut();
@@ -77,7 +79,7 @@ namespace NasconGJ.UI
                 if (layout != null) layout.preferredWidth = width;
                 else keyCap.sizeDelta = new Vector2(width, keyCap.sizeDelta.y);
             }
-            if (chimeSource != null && chimeClip != null) chimeSource.PlayOneShot(chimeClip, 0.35f);
+            if (!quiet && chimeSource != null && chimeClip != null) chimeSource.PlayOneShot(chimeClip, 0.35f);
 
             yield return FadeIn();
 

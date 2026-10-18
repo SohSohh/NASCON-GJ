@@ -79,8 +79,10 @@ namespace NasconGJ.Entities
         public Vector3 SurfacePoint => pos;
         public float CurrentLightExposure { get; private set; }
 
-        public bool IsWithinShadowEffectRange => player != null && drainRadius > 0f &&
-            (Center - player.position).sqrMagnitude <= drainRadius * drainRadius;
+        [Tooltip("Within this distance the shadow is 'near': its whisper plays and the carried flame burns faster.")]
+        [SerializeField] private float shadowEffectRange = 5f;
+        public bool IsWithinShadowEffectRange => player != null && shadowEffectRange > 0f &&
+            (Center - player.position).sqrMagnitude <= shadowEffectRange * shadowEffectRange;
         // The proximity warning stays audible even when torchlight freezes movement.
         private float WhisperTargetVolume => Current == State.Windup ? 1f : 0.9f;
         public bool IsWhisperAudible => isActiveAndEnabled &&

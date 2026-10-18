@@ -67,7 +67,8 @@ namespace NasconGJ.EditorTools.Generation
                 Color.white, ring);
             SetupTransferRing(ringImg);
 
-            var prompt = MakeText(MakeRect("Prompt", root, Center, Center, new Vector2(0, -90), new Vector2(1250, 120)), "", body, 36, Warm, TextAlignmentOptions.Top);
+            var prompt = MakeText(MakeRect("Prompt", root, Center, Center, new Vector2(0, -90), new Vector2(1250, 120)), "", body, 36, Warm, TextAlignmentOptions.Top);   // same face as the hint cards (EB Garamond Bold, on a dark band)
+            prompt.fontStyle = FontStyles.Bold;
             prompt.fontStyle = FontStyles.Bold;
 
             // fuel meter (bottom-left)

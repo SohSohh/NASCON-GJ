@@ -99,19 +99,36 @@ namespace NasconGJ.UI
             if (inventory != null) UpdatePrompt();
         }
 
+        private string shownPrompt;
+
+        /// <summary>
+        /// World prompts ("F  Hold to light the candle", "F  Pick up stick") use the same card as the tutorial hints, so
+        /// every on-screen instruction looks the same. Tutorial hints take priority; the prompt waits until they're gone.
+        /// </summary>
         private void UpdatePrompt()
         {
-            string prompt = "";
-            // one prompt at a time; none until the wake-up is over, and none while a tutorial hint is already saying it
-            if (!DialogueUI.IsOpen && (wake == null || wake.Finished) &&
-                (HintUI.Instance == null || !HintUI.Instance.IsShowing) && (death == null || !death.IsDead))
+            promptText.text = "";
+            string label = null;
+            if (!DialogueUI.IsOpen && (wake == null || wake.Finished) && (death == null || !death.IsDead))
             {
                 if (carrier.TransferTarget != null) // lighting comes first; once it burns, the same key picks it up
-                    prompt = $"<color=#FFF4E8><b>Hold</b></color> <mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark> <color=#FFF4E8>to light the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}</color>";
+                    label = $"Hold to light the {carrier.TransferTarget.DisplayName.ToLowerInvariant()}";
                 else if (interactor.Current != null)
-                    prompt = $"<mark=#130A06E8><color=#FFD084><b>[F]</b></color></mark> <color=#FFF4E8>to {interactor.Current.Prompt.ToLowerInvariant()}</color>";
+                {
+                    string p = interactor.Current.Prompt;
+                    label = p.Length > 0 ? char.ToUpperInvariant(p[0]) + p.Substring(1) : p;
+                }
             }
-            promptText.text = prompt;
+
+            var hint = HintUI.Instance;
+            // a lesson replaced our card: forget it so it comes back once the lesson is gone
+            if (hint != null && shownPrompt != null && hint.CurrentId != shownPrompt) shownPrompt = null;
+            string id = label != null ? "prompt:" + label : null;
+            if (hint == null || id == shownPrompt) return;
+            bool tutorialUp = hint.IsShowing && (hint.CurrentId == null || !hint.CurrentId.StartsWith("prompt:"));
+            if (tutorialUp) return;                    // never cover a lesson; show once it has faded
+            shownPrompt = id;
+            if (id != null) hint.Show("F", label, 0.1f, () => shownPrompt != id, id, quiet: true);
         }
 
         private void UpdateFuel()

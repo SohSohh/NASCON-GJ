@@ -62,3 +62,7 @@ MonoBehaviour:
   orangeFlickerAlpha: 0.2
   faceFadeDuration: 0.02
   blackHold: 0.2
+  impactHit: {fileID: 8300000, guid: ca2265864449fd645b73b3f5124637b4, type: 3}
+  impactNegative: {fileID: 2800000, guid: 87c35b2c0241ade4ea04d1383d918ed8, type: 3}
+  impactRed: {fileID: 2800000, guid: d4d5c67e3fa4fe64eb054eb4c53dc11f, type: 3}
+  impactHarsh: {fileID: 2800000, guid: b6a99c262239d914f9dae0642c891517, type: 3}

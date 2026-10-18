@@ -54,6 +54,10 @@ namespace NasconGJ.Player
 
         /// <summary>External speed scale (e.g. slowed while covering fire). 1 = normal.</summary>
         public float SpeedMultiplier { get; set; } = 1f;
+        /// <summary>Set by a level that already moves you at a fixed pace (the chase).</summary>
+        public bool SprintDisabled { get; set; }
+        /// <summary>Extra speed set by a level (the chase); separate from <see cref="SpeedMultiplier"/>, which the flame cover drives.</summary>
+        public float LevelSpeedBoost { get; set; } = 1f;
 
         private CharacterController controller;
         private PlayerInputReader input;
@@ -75,6 +79,7 @@ namespace NasconGJ.Player
         {
             GameManager.Instance?.SetState(GameState.Playing);
             SetCursorLocked(true);
+            if (Transit.ArrivingNow) SetPitch(Transit.Pitch);   // through a passage: keep looking exactly where you were
         }
 
         public static void SetCursorLocked(bool locked)
@@ -116,10 +121,10 @@ namespace NasconGJ.Player
             Vector2 move = MovementLocked ? Vector2.zero : Vector2.ClampMagnitude(input.Move, 1f);
 
             IsCrouching = UpdateCrouchState(!MovementLocked && input.CrouchHeld);
-            IsSprinting = !IsCrouching && input.SprintHeld && move.y > 0.1f;
+            IsSprinting = !SprintDisabled && !IsCrouching && input.SprintHeld && move.y > 0.1f;
 
             float speed = IsCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed;
-            Vector3 target = (transform.right * move.x + transform.forward * move.y) * speed * SpeedMultiplier;
+            Vector3 target = (transform.right * move.x + transform.forward * move.y) * speed * SpeedMultiplier * LevelSpeedBoost;
             planarVelocity = Vector3.MoveTowards(planarVelocity, target, acceleration * speed * Time.deltaTime);
 
             if (controller.isGrounded)

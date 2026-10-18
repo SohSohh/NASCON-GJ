@@ -5053,7 +5053,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NasconGJ.Fire.FlammableItem
   displayName: Stick
-  maxBurnTime: 35
+  maxBurnTime: 60
   infiniteBurn: 0
   startLit: 0
   startFuelFraction: 1

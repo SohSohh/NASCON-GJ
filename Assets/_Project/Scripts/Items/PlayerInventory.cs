@@ -38,6 +38,19 @@ namespace NasconGJ.Items
 
         private void Start()
         {
+            if (Core.Transit.ArrivingNow)
+            {
+                // through a passage: you're holding what you carried in, from the very first frame
+                if (Core.Transit.CarriedPrefab == null) return;
+                var carried = Instantiate(Core.Transit.CarriedPrefab);
+                PickUp(carried);
+                if (carried.Flammable != null)
+                {
+                    if (Core.Transit.Burning) carried.Flammable.Ignite();
+                    carried.Flammable.SetFuel(Mathf.Max(0.05f, Core.Transit.Fuel));
+                }
+                return;
+            }
             if (startingItemPrefab == null) return;
             var item = Instantiate(startingItemPrefab);
             PickUp(item);

@@ -16,7 +16,8 @@ namespace NasconGJ.UI
         private void Awake()
         {
             Instance = this;
-            group.alpha = 1f;
+            // walked in through a level passage: no black, no fade, the descent just continues
+            group.alpha = Core.Transit.Pending || Core.Transit.ArrivedFrame == Time.frameCount ? 0f : 1f;   // whichever runs first
         }
 
         private void OnDestroy()
@@ -24,7 +25,10 @@ namespace NasconGJ.UI
             if (Instance == this) Instance = null;
         }
 
-        private void Start() => FadeTo(0f, fadeInOnStart);
+        private void Start()
+        {
+            if (group.alpha > 0f) FadeTo(0f, fadeInOnStart);
+        }
 
         public Coroutine FadeTo(float alpha, float duration)
         {
